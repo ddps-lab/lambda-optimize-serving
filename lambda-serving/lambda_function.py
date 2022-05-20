@@ -5,7 +5,6 @@ import json
 from json import load
 import numpy as np
 import os
-import torch
 import boto3
 
 
@@ -31,6 +30,7 @@ def load_model(mtype ,bucket_name,model_name,batchsize):
     s3_client = boto3.client('s3') 
     
     if mtype == "base":
+        import torch
         os.makedirs(os.path.dirname(f'/tmp/base/{model_name}/'), exist_ok=True)
         s3_client.download_file(bucket_name, f'torch/base/{model_name}/model.pt', f'/tmp/base/{model_name}/model.pt')
         s3_client.download_file(bucket_name, f'torch/base/{model_name}/model_state_dict.pt', f'/tmp/base/{model_name}/model_state_dict.pt')
@@ -55,6 +55,7 @@ def load_model(mtype ,bucket_name,model_name,batchsize):
     return model
 
 def base_serving(bucket_name,model_name,batchsize,imgsize=224,repeat=10):
+    import torch
     # random data
     input_shape = (batchsize, 3, imgsize, imgsize)
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
