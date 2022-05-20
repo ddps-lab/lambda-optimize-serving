@@ -9,6 +9,25 @@ import boto3
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
+
+def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
+    """Helper function to time a function"""
+    for i in range(dryrun):
+        thunk()
+    ret = []
+    for _ in range(repeat):
+        while True:
+            beg = time.time()
+            for _ in range(number):
+                thunk()
+            end = time.time()
+            lat = (end - beg) * 1e3
+            if lat >= min_repeat_ms:
+                break
+            number = int(max(min_repeat_ms / (lat / number) + 1, number * 1.618))
+        ret.append(lat / number)
+    return ret
+
 def load_model(mtype, model_name, batchsize):
     s3_client = boto3.client('s3')
 
@@ -41,7 +60,7 @@ def load_model(mtype, model_name, batchsize):
     return model
 
 
-def base_serving(model_name, batchsize, imgsize=224):
+def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     import torch
     # random data
     input_shape = (batchsize, 3, imgsize, imgsize)
@@ -50,12 +69,15 @@ def base_serving(model_name, batchsize, imgsize=224):
 
     model = load_model("base", BUCKET_NAME, model_name, batchsize)
     model.eval()
-
-    res = model(torch_data)
+    
+    res = timer(lambda: model(torch_data),
+                repeat=repeat,
+                dryrun=5,
+                min_repeat_ms=1000)
     return res
 
 
-def onnx_serving(model_name, batchsize, imgsize=224):
+def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     import onnxruntime as ort
 
     model_path = load_model("onnx", BUCKET_NAME, model_name, batchsize)
@@ -70,11 +92,16 @@ def onnx_serving(model_name, batchsize, imgsize=224):
     image_shape = (3, imgsize, imgsize)
     data_shape = (batchsize,) + image_shape
     data = np.random.uniform(-1, 1, size=data_shape).astype("float32")
-
-    res = session.run(outname, {inname[0]: data})    
+    for i in range(repeat):
+        start_time = time.time()
+        session.run(outname, {inname[0]: data})
+        running_time = time.time() - start_time
+        time_list.append(running_time)
+        
+    res = np.median(np.array(time_list[1:]))
     return res
 
-def tvm_serving(model_name, batchsize, imgsize=224):
+def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     import tvm
     from tvm import relay
     import tvm.contrib.graph_executor as runtime
@@ -92,9 +119,9 @@ def tvm_serving(model_name, batchsize, imgsize=224):
     module = runtime.GraphModule(loaded_lib["default"](dev))
     data = np.random.uniform(size=input_shape)
     module.set_input(input_name, data)
-    ftimer = module.module.time_evaluator("run", dev, min_repeat_ms=500, repeat=3)
-    prof_res = np.array(ftimer().results) * 1000
-    print(f"TVM {model_name} latency for batch {batchsize} : {np.mean(prof_res):.2f} ms")
+    ftimer = module.module.time_evaluator("run", dev, min_repeat_ms=500, repeat=repeat)
+    res = np.array(ftimer().results) * 1000
+    return res
 
 
 def lambda_handler(event, context):
@@ -116,7 +143,8 @@ def lambda_handler(event, context):
     elif compiler_type == "base":
         res = base_serving(model_name, batchsize)
     running_time = time.time() - start_time
-    return {'handler_time': running_time}
+    return {'handler_time': running_time,
+           'average_inference_time': res}
 
 # test 
 # bucket_name = ''
