@@ -10,12 +10,16 @@ RUN pip3 install torch torchvision torchaudio --extra-index-url https://download
 RUN mkdir -p /var/task/lib
 RUN cp /usr/lib64/atlas-sse3/liblapack.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libptf77blas.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libf77blas.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libptcblas.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libcblas.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libatlas.so.3 /var/task/lib/. & cp /usr/lib64/atlas-sse3/libptf77blas.so.3 /var/task/lib/. & cp /usr/lib64/libgfortran.so.3 /var/task/lib/. & cp /usr/lib64/libquadmath.so.0 /var/task/lib/.
 
-# git clone
-RUN git clone https://github.com/subeans/lambda-model-converter.git
-WORKDIR lambda-model-converter/
+# git 특정 폴더만 clone
+RUN mkdir lambda-serving
+WORKDIR lambda-serving
+RUN git config core.sparseCheckout true
+RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
+RUN echo https://github.com/ddps-lab/lambda-optimize-serving/tree/main/lambda-serving.git >> .git/info/sparse-checkout
+RUN git pull origin main
 
 # tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-model-converter/tvm
+ENV TVM_HOME=/var/task/lambda-serving/tvm
 ENV PATH=$PATH:$TVM_HOME/bin
 ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
 ENV PATH=$TVM_HOME/python:$PATH
