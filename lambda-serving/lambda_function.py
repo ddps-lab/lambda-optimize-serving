@@ -9,26 +9,6 @@ import boto3
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
-
-def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
-    """Helper function to time a function"""
-    for i in range(dryrun):
-        thunk()
-    ret = []
-    for _ in range(repeat):
-        while True:
-            beg = time.time()
-            for _ in range(number):
-                thunk()
-            end = time.time()
-            lat = (end - beg) * 1e3
-            if lat >= min_repeat_ms:
-                break
-            number = int(max(min_repeat_ms / (lat / number) + 1, number * 1.618))
-        ret.append(lat / number)
-    return ret
-
-
 def load_model(mtype, model_name, batchsize):
     s3_client = boto3.client('s3')
 
@@ -61,7 +41,7 @@ def load_model(mtype, model_name, batchsize):
     return model
 
 
-def base_serving(model_name, batchsize, imgsize=224, repeat=10):
+def base_serving(model_name, batchsize, imgsize=224):
     import torch
     # random data
     input_shape = (batchsize, 3, imgsize, imgsize)
@@ -71,15 +51,11 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     model = load_model("base", BUCKET_NAME, model_name, batchsize)
     model.eval()
 
-    res = timer(lambda: model(torch_data),
-                repeat=3,
-                dryrun=5,
-                min_repeat_ms=1000)
-
-    print(f"Pytorch {model_name} latency for batch {batchsize} : {np.mean(res):.2f} ms")
+    res = model(torch_data)
+    return res
 
 
-def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
+def onnx_serving(model_name, batchsize, imgsize=224):
     import onnxruntime as ort
 
     model_path = load_model("onnx", BUCKET_NAME, model_name, batchsize)
@@ -95,16 +71,8 @@ def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     data_shape = (batchsize,) + image_shape
     data = np.random.uniform(-1, 1, size=data_shape).astype("float32")
 
-    time_list = []
-    for i in range(repeat):
-        start_time = time.time()
-        session.run(outname, {inname[0]: data})
-        running_time = time.time() - start_time
-        time_list.append(running_time)
-
-    time_medium = np.median(np.array(time_list[1:]))
-    print(f"{model_name} inference time median : {time_medium * 1000} ms")
-
+    res = session.run(outname, {inname[0]: data})    
+    return res
 
 def tvm_serving(model_name, batchsize, imgsize=224):
     import tvm
@@ -137,15 +105,16 @@ def lambda_handler(event, context):
     compiler_type = event['compiler_type']
     batchsize = event['batchsize']
 
+    
     if compiler_type == "onnx":
         print("Torch model to ONNX model serving")
-        onnx_serving(model_name, batchsize)
+        res = onnx_serving(model_name, batchsize)
 
     elif compiler_type == "tvm":
-        tvm_serving(model_name, batchsize)
+        res = tvm_serving(model_name, batchsize)
 
     elif compiler_type == "base":
-        base_serving(model_name, batchsize)
+        res = base_serving(model_name, batchsize)
     running_time = time.time() - start_time
     return {'handler_time': running_time}
 
