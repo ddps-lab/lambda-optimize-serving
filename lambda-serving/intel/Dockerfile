@@ -10,15 +10,17 @@ RUN pip3 install torch torchvision --extra-index-url https://download.pytorch.or
 RUN mkdir -p /var/task/lib
 
 # git 특정 폴더만 clone
-RUN mkdir lambda-serving
-WORKDIR lambda-serving
+RUN mkdir lambda-optimize-serving
+WORKDIR lambda-optimize-serving
+RUN git init
 RUN git config core.sparseCheckout true
 RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
-RUN echo https://github.com/ddps-lab/lambda-optimize-serving/tree/main/lambda-serving/intel >> .git/info/sparse-checkout
+RUN echo lambda-serving/intel/* >> .git/info/sparse-checkout
 RUN git pull origin main
+WORKDIR lambda-serving/intel
 
 # tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-serving/tvm
+ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/intel/tvm
 ENV PATH=$PATH:$TVM_HOME/bin
 ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
 ENV PATH=$TVM_HOME/python:$PATH
