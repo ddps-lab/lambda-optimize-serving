@@ -15,4 +15,3 @@ protobuf
 onnxruntime
 
 Pillow
-request_toolbelt
