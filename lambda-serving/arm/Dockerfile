@@ -15,7 +15,7 @@ RUN mkdir lambda-serving
 WORKDIR lambda-serving
 RUN git config core.sparseCheckout true
 RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
-RUN echo https://github.com/ddps-lab/lambda-optimize-serving/tree/main/lambda-serving.git >> .git/info/sparse-checkout
+RUN echo https://github.com/ddps-lab/lambda-optimize-serving/tree/main/lambda-serving/arm >> .git/info/sparse-checkout
 RUN git pull origin main
 
 # tvm env 설정 
