@@ -1,4 +1,4 @@
-export IMAGE_NAME="lambda_optimize_serving"
+export IMAGE_NAME="lambda_optimize_serving_arm"
 
 sudo service docker start
 
