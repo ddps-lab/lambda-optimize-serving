@@ -1,4 +1,4 @@
-export IMAGE_NAME="subin_model_converter"
+export IMAGE_NAME="lambda_optimize-serving"
 
 sudo service docker start
 
