@@ -67,7 +67,7 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
-    model = load_model("base", BUCKET_NAME, model_name, batchsize)
+    model = load_model("base", BUCKET_NAME, model_name)
     model.eval()
     
     res = timer(lambda: model(torch_data),
@@ -80,7 +80,7 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
 def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     import onnxruntime as ort
 
-    model_path = load_model("onnx", BUCKET_NAME, model_name, batchsize)
+    model_path = load_model("onnx", BUCKET_NAME, model_name)
 
     session = ort.InferenceSession(model_path)
     session.get_modelmeta()
@@ -112,7 +112,7 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
 
-    model_path = load_model("tvm", BUCKET_NAME, model_name, batchsize)
+    model_path = load_model("tvm", BUCKET_NAME, model_name)
     loaded_lib = tvm.runtime.load_module(model_path)
 
     dev = tvm.cpu()
