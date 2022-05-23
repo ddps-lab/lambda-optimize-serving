@@ -1,5 +1,6 @@
 export IMAGE_NAME="lambda_optimize_serving_arm"
 
+sudo chmod 666 /var/run/docker.sock
 sudo service docker start
 
 docker build -t $IMAGE_NAME . --no-cache
