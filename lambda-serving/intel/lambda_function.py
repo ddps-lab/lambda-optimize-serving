@@ -10,6 +10,7 @@ import boto3
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 print(BUCKET_NAME)
 
+
 def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
     """Helper function to time a function"""
     for i in range(dryrun):
@@ -27,6 +28,7 @@ def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
             number = int(max(min_repeat_ms / (lat / number) + 1, number * 1.618))
         ret.append(lat / number)
     return ret
+
 
 def load_model(mtype, model_name, batchsize):
     s3_client = boto3.client('s3')
@@ -67,9 +69,9 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
-    model = load_model("base", BUCKET_NAME, model_name)
+    model = load_model("base", model_name, batchsize)
     model.eval()
-    
+
     res = timer(lambda: model(torch_data),
                 repeat=repeat,
                 dryrun=5,
@@ -80,7 +82,7 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
 def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     import onnxruntime as ort
 
-    model_path = load_model("onnx", BUCKET_NAME, model_name)
+    model_path = load_model("onnx", model_name, batchsize)
 
     session = ort.InferenceSession(model_path)
     session.get_modelmeta()
@@ -97,9 +99,10 @@ def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
         session.run(outname, {inname[0]: data})
         running_time = time.time() - start_time
         time_list.append(running_time)
-        
+
     res = np.median(np.array(time_list[1:]))
     return res
+
 
 def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     import tvm
@@ -112,7 +115,7 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
 
-    model_path = load_model("tvm", BUCKET_NAME, model_name)
+    model_path = load_model("tvm", model_name, batchsize)
     loaded_lib = tvm.runtime.load_module(model_path)
 
     dev = tvm.cpu()
@@ -132,7 +135,6 @@ def lambda_handler(event, context):
     compiler_type = event['compiler_type']
     batchsize = event['batchsize']
 
-    
     if compiler_type == "onnx":
         print("Torch model to ONNX model serving")
         res = onnx_serving(model_name, batchsize)
@@ -144,7 +146,7 @@ def lambda_handler(event, context):
         res = base_serving(model_name, batchsize)
     running_time = time.time() - start_time
     return {'handler_time': running_time,
-           'average_inference_time': res}
+            'average_inference_time': res}
 
 # test 
 # bucket_name = ''
