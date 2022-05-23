@@ -8,7 +8,7 @@ import os
 import boto3
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
-
+print(BUCKET_NAME)
 
 def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
     """Helper function to time a function"""
