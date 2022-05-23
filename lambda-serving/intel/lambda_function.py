@@ -52,7 +52,7 @@ def load_model(mtype, model_name, batchsize):
 
     elif mtype == "tvm":
         os.makedirs(os.path.dirname(f'/tmp/tvm/{model_name}/'), exist_ok=True)
-        s3_client.download_file(BUCKET_NAME, f'torch/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',
+        s3_client.download_file(BUCKET_NAME, f'torch/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',
                                 f'/tmp/tvm/{model_name}/{model_name}_{batchsize}.tar')
 
         model = f"/tmp/tvm/{model_name}/{model_name}_{batchsize}.tar"
