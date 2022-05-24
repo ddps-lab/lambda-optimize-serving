@@ -9,9 +9,15 @@ RUN yum -y install python3-dev python3-setuptools libtinfo-dev zlib1g-dev build-
 RUN yum -y install numpy libgomp gcc-gfortran libgfortran blas lapack lapack-devel atlas-sse3-devel
 RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 
-# git clone
-RUN git clone https://github.com/subeans/lambda-model-converter.git
-WORKDIR lambda-model-converter/
+# git 특정 폴더만 clone
+RUN mkdir lambda-optimize-serving
+WORKDIR lambda-optimize-serving
+RUN git init
+RUN git config core.sparseCheckout true
+RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
+RUN echo lambda-optimize/* >> .git/info/sparse-checkout
+RUN git pull origin main
+WORKDIR lambda-optimize
 
 # tvm env 설정 
 ENV TVM_HOME=/var/task/lambda-model-converter/tvm
