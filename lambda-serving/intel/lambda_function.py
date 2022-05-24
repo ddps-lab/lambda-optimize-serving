@@ -1,5 +1,3 @@
-# image-classification converter 
-
 import time
 import json
 from json import load
@@ -8,26 +6,6 @@ import os
 import boto3
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
-print(BUCKET_NAME)
-
-
-def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
-    """Helper function to time a function"""
-    for i in range(dryrun):
-        thunk()
-    ret = []
-    for _ in range(repeat):
-        while True:
-            beg = time.time()
-            for _ in range(number):
-                thunk()
-            end = time.time()
-            lat = (end - beg) * 1e3
-            if lat >= min_repeat_ms:
-                break
-            number = int(max(min_repeat_ms / (lat / number) + 1, number * 1.618))
-        ret.append(lat / number)
-    return ret
 
 
 def load_model(mtype, model_name, batchsize):
@@ -72,10 +50,14 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     model = load_model("base", model_name, batchsize)
     model.eval()
 
-    res = timer(lambda: model(torch_data),
-                repeat=repeat,
-                dryrun=5,
-                min_repeat_ms=1000)
+    time_list = []
+    for i in range(repeat):
+        start_time = time.time()
+        model(torch_data)
+        running_time = time.time() - start_time
+        time_list.append(running_time)
+
+    res = np.median(np.array(time_list[1:]))
     return res
 
 
@@ -94,6 +76,8 @@ def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     image_shape = (3, imgsize, imgsize)
     data_shape = (batchsize,) + image_shape
     data = np.random.uniform(-1, 1, size=data_shape).astype("float32")
+
+    time_list = []
     for i in range(repeat):
         start_time = time.time()
         session.run(outname, {inname[0]: data})
@@ -111,7 +95,7 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
 
     input_name = "input0"
     if model_name == "inception_v3":
-        imgsize == 299
+        imgsize = 299
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
 
@@ -122,6 +106,7 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     module = runtime.GraphModule(loaded_lib["default"](dev))
     data = np.random.uniform(size=input_shape)
     module.set_input(input_name, data)
+
     ftimer = module.module.time_evaluator("run", dev, min_repeat_ms=500, repeat=repeat)
     res = np.array(ftimer().results) * 1000
     return res
@@ -145,22 +130,6 @@ def lambda_handler(event, context):
     elif compiler_type == "base":
         res = base_serving(model_name, batchsize)
     running_time = time.time() - start_time
+
     return {'handler_time': running_time,
             'average_inference_time': res}
-
-# test 
-# bucket_name = ''
-# model_name = 'mobilenet_v2'
-# compiler_type='base'
-# batchsize = 1
-
-
-# if compiler_type == "onnx":
-#     print("Torch model to ONNX model serving")
-#     onnx_serving(bucket_name,model_name,batchsize)
-
-# elif compiler_type == "tvm":
-#     tvm_serving(bucket_name,model_name,batchsize)
-
-# elif compiler_type == "base":
-#     base_serving(bucket_name,model_name,batchsize)
