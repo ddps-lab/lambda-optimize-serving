@@ -18,16 +18,6 @@ RUN echo lambda-serving/arm/* >> .git/info/sparse-checkout
 RUN git pull origin main
 WORKDIR lambda-serving/arm
 
-# tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/arm/tvm
-ENV PATH=$PATH:$TVM_HOME/bin
-ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
-ENV PATH=$TVM_HOME/python:$PATH
-
-RUN mkdir tvm/build && cp config.cmake tvm/build && env CC=cc CXX=CC
-
-RUN cd tvm/build && cmake .. && make -j3
-
 RUN pip3 install -r requirements.txt
 
 RUN cp lambda_function.py ${LAMBDA_TASK_ROOT}
