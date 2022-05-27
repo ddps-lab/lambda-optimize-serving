@@ -1,6 +1,5 @@
 # image-classification converter 
 
-from lib2to3.pytree import convert
 import time
 from json import load
 import os
