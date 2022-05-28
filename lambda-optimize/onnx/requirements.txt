@@ -1,0 +1,8 @@
+numpy
+boto3
+pytest
+python-dotenv
+
+onnx
+protobuf
+onnxruntime

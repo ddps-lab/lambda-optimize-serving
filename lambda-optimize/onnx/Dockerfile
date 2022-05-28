@@ -15,19 +15,9 @@ WORKDIR lambda-optimize-serving
 RUN git init
 RUN git config core.sparseCheckout true
 RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
-RUN echo lambda-optimize/* >> .git/info/sparse-checkout
+RUN echo lambda-optimize/onnx/* >> .git/info/sparse-checkout
 RUN git pull origin main
-WORKDIR lambda-optimize
-
-# tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-model-converter/tvm
-ENV PATH=$PATH:$TVM_HOME/bin
-ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
-ENV PATH=$TVM_HOME/python:$PATH
-
-RUN mkdir tvm/build && cp config.cmake tvm/build && env CC=cc CXX=CC
-
-RUN cd tvm/build && cmake .. && make -j3
+WORKDIR lambda-optimize/onnx
 
 RUN pip3 install -r requirements.txt
 
