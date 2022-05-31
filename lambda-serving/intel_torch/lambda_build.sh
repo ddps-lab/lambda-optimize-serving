@@ -1,4 +1,4 @@
-export IMAGE_NAME="lambda_optimize_serving"
+export IMAGE_NAME="serving_intel_torch"
 
 sudo chmod 666 /var/run/docker.sock
 sudo service docker start
@@ -11,4 +11,15 @@ docker tag $IMAGE_NAME $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME
 
 aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
 
+aws ecr create-repository \
+    --repository-name $IMAGE_NAME \
+    --image-scanning-configuration scanOnPush=true \
+    --region us-west-2
+
 docker push $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME
+
+aws lambda create-function --region us-west-2 --function-name ${IMAGE_NAME} \
+            --package-type Image  \
+            --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:latest   \
+            --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
+            --architectures x86_64
