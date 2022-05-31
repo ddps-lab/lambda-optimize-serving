@@ -9,7 +9,3 @@ tornado
 xgboost
 psutil
 cloudpickle
-
-onnx
-protobuf
-onnxruntime
