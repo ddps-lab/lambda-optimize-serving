@@ -10,24 +10,6 @@ import boto3
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
-def timer(thunk, repeat=1, number=10, dryrun=3, min_repeat_ms=1000):
-    """Helper function to time a function"""
-    for i in range(dryrun):
-        thunk()
-    ret = []
-    for _ in range(repeat):
-        while True:
-            beg = time.time()
-            for _ in range(number):
-                thunk()
-            end = time.time()
-            lat = (end - beg) * 1e3
-            if lat >= min_repeat_ms:
-                break
-            number = int(max(min_repeat_ms / (lat / number) + 1, number * 1.618))
-        ret.append(lat / number)
-    return ret
-
 def load_model(model_name, batchsize):
     s3_client = boto3.client('s3')
 
@@ -51,13 +33,17 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
-    model = load_model(model_name, batchsize)
+    model = load_model("base", model_name, batchsize)
     model.eval()
-    
-    res = timer(lambda: model(torch_data),
-                repeat=repeat,
-                dryrun=5,
-                min_repeat_ms=1000)
+
+    time_list = []
+    for i in range(repeat):
+        start_time = time.time()
+        model(torch_data)
+        running_time = time.time() - start_time
+        time_list.append(running_time)
+
+    res = np.median(np.array(time_list[1:]))
     return res
 
 
