@@ -20,5 +20,5 @@ docker push $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME
 
 aws lambda create-function --region us-west-2 --function-name ${IMAGE_NAME} \
             --package-type Image  \
-            --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/${IAMGE_NAME}:latest   \
+            --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME:latest   \
             --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
