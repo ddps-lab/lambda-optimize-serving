@@ -1,4 +1,4 @@
-export IMAGE_NAME="serving_arm_base"
+export IMAGE_NAME="serving_arm_torch"
 
 sudo chmod 666 /var/run/docker.sock
 sudo service docker start
