@@ -1,5 +1,3 @@
-
-   
 export IMAGE_NAME="serving_arm_tvm"
 
 sudo chmod 666 /var/run/docker.sock
