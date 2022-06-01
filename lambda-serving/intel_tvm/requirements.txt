@@ -10,8 +10,4 @@ xgboost
 psutil
 cloudpickle
 
-onnx
-protobuf
-onnxruntime
-
 Pillow
