@@ -1,5 +1,3 @@
-# image-classification converter 
-
 import time
 import json
 from json import load
@@ -15,8 +13,8 @@ def load_model(model_name, batchsize):
 
     import torch
     os.makedirs(os.path.dirname(f'/tmp/base/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'torch/base/{model_name}/model.pt', f'/tmp/base/{model_name}/model.pt')
-    s3_client.download_file(BUCKET_NAME, f'torch/base/{model_name}/model_state_dict.pt',
+    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model.pt', f'/tmp/base/{model_name}/model.pt')
+    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model_state_dict.pt',
                             f'/tmp/base/{model_name}/model_state_dict.pt')
 
     PATH = f"/tmp/base/{model_name}/"
@@ -33,7 +31,7 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
-    model = load_model("base", model_name, batchsize)
+    model = load_model(model_name, batchsize)
     model.eval()
 
     time_list = []
