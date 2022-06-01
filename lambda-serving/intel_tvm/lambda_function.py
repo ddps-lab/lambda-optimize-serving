@@ -11,11 +11,11 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 def load_model(model_name, batchsize):
     s3_client = boto3.client('s3')
 
-    os.makedirs(os.path.dirname(f'/tmp/tvm/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',
-                            f'/tmp/tvm/{model_name}/{model_name}_{batchsize}.tar')
+    os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
+    s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/{model_name}_{batchsize}.tar',
+                            f'/tmp/tvm/{model_name}_{batchsize}.tar')
 
-    model = f"/tmp/tvm/{model_name}/{model_name}_{batchsize}.tar"
+    model = f"/tmp/tvm/{model_name}_{batchsize}.tar"
 
     return model
 
