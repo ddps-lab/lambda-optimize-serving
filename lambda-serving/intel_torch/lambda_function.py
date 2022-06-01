@@ -48,19 +48,16 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
 def lambda_handler(event, context):
     start_time = time.time()
     
-    for e in event:
-        if e['execute'] == True:
-            model_name = e['model_name']
-            hardware = e['hardware']
-            framework = e['framework']
-            optimizer = e['optimizer']
-            lambda_memory = e['lambda_memory']
-            batchsize = e['batchsize']
-            user_email = e['user_email']
-            convert_time = e['convert_time']
-            break
-    
-    if optimizer == "base":
+    if optimizer == "base" and hardware == "intel":
+        model_name = event['model_name']
+        hardware = event['hardware']
+        framework = event['framework']
+        optimizer = event['optimizer']
+        lambda_memory = event['lambda_memory']
+        batchsize = event['batchsize']
+        user_email = event['user_email']
+        convert_time = event['convert_time']
+
         res = base_serving(model_name, batchsize)
         running_time = time.time() - start_time
         return {
