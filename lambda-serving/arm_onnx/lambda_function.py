@@ -11,12 +11,12 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 def load_model(model_name, batchsize):
     s3_client = boto3.client('s3')
 
-    os.makedirs(os.path.dirname(f'/tmp/onnx/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/onnx/{model_name}/{model_name}_{batchsize}.onnx',
-                                f'/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx')
+    os.makedirs(os.path.dirname(f'/tmp/onnx/'), exist_ok=True)
+    s3_client.download_file(BUCKET_NAME, f'models/onnx/{model_name}_{batchsize}.onnx',
+                                f'/tmp/onnx/{model_name}_{batchsize}.onnx')
 
     # onnx 는 model path 필요 
-    model = f"/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx"
+    model = f"/tmp/onnx/{model_name}_{batchsize}.onnx"
 
     return model
 
