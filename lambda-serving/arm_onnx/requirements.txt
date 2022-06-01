@@ -3,16 +3,8 @@ boto3
 pytest
 python-dotenv
 
-decorator
-attrs
-tornado
-xgboost
-psutil
-cloudpickle
-
 onnx
 protobuf
 onnxruntime
 
 Pillow
-request_toolbelt
