@@ -5,7 +5,6 @@ RUN yum install -y wget
 RUN yum -y install cmake3 gcc gcc-c++ make && ln -s /usr/bin/cmake3 /usr/bin/cmake
 RUN yum -y install python3-dev python3-setuptools libtinfo-dev zlib1g-dev build-essential libedit-dev llvm llvm-devel libxml2-dev git tar gcc gcc-c++
 RUN yum -y install libgomp gcc-gfortran libgfortran blas lapack atlas-sse3-devel
-RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 
 
 # git 특정 폴더만 clone
