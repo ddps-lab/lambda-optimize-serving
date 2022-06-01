@@ -14,12 +14,12 @@ WORKDIR lambda-optimize-serving
 RUN git init
 RUN git config core.sparseCheckout true
 RUN git remote add -f origin https://github.com/ddps-lab/lambda-optimize-serving
-RUN echo lambda-serving/arm/* >> .git/info/sparse-checkout
+RUN echo lambda-serving/arm_tvm/* >> .git/info/sparse-checkout
 RUN git pull origin main
-WORKDIR lambda-serving/arm
+WORKDIR lambda-serving/arm_tvm
 
 # tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/arm/tvm
+ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/arm_tvm
 ENV PATH=$PATH:$TVM_HOME/bin
 ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
 ENV PATH=$TVM_HOME/python:$PATH
