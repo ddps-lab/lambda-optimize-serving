@@ -47,17 +47,16 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
 
 def lambda_handler(event, context):
     start_time = time.time()
-    
-    if optimizer == "base" and hardware == "arm":
-        model_name = event['model_name']
-        hardware = event['hardware']
-        framework = event['framework']
-        optimizer = event['optimizer']
-        lambda_memory = event['lambda_memory']
-        batchsize = event['batchsize']
-        user_email = event['user_email']
-        convert_time = event['convert_time']
+    model_name = event['model_name']
+    hardware = event['hardware']
+    framework = event['framework']
+    optimizer = event['optimizer']
+    lambda_memory = event['lambda_memory']
+    batchsize = event['batchsize']
+    user_email = event['user_email']
+    convert_time = event['convert_time']
 
+    if optimizer == "base" and hardware == "arm":
         res = base_serving(model_name, batchsize)
         running_time = time.time() - start_time
         return {
