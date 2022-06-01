@@ -68,11 +68,11 @@ def lambda_handler(event, context):
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
-            'execute': true,
+            'execute': True,
             'convert_time': convert_time,
             'inference_time': running_time
         }
     else:
         return {
-            'execute': false
+            'execute': False
         }
