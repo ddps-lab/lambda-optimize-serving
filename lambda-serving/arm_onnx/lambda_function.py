@@ -36,6 +36,8 @@ def onnx_serving(model_name, batchsize, imgsize=224, repeat=10):
     image_shape = (3, imgsize, imgsize)
     data_shape = (batchsize,) + image_shape
     data = np.random.uniform(-1, 1, size=data_shape).astype("float32")
+    
+    time_list = []
     for i in range(repeat):
         start_time = time.time()
         session.run(outname, {inname[0]: data})
