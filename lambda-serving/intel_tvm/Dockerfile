@@ -17,7 +17,7 @@ RUN git pull origin main
 WORKDIR lambda-serving/intel_tvm
 
 # tvm env 설정 
-ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/intel_tvm
+ENV TVM_HOME=/var/task/lambda-optimize-serving/lambda-serving/intel_tvm/tvm
 ENV PATH=$PATH:$TVM_HOME/bin
 ENV PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
 ENV PATH=$TVM_HOME/python:$PATH
