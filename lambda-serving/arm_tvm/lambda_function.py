@@ -33,13 +33,22 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
 
     model_path = load_model(model_name, batchsize)
     loaded_lib = tvm.runtime.load_module(model_path)
-
-    dev = tvm.cpu()
+    
+    target = tvm.target.arm_cpu()
+    dev = tvm.deivce(target, 0)
     module = runtime.GraphModule(loaded_lib["default"](dev))
     data = np.random.uniform(size=input_shape)
+    data = tvm.nd.array(data, dev)
     module.set_input(input_name, data)
-    ftimer = module.module.time_evaluator("run", dev, min_repeat_ms=500, repeat=repeat)
-    res = np.array(ftimer().results) * 1000
+    
+    time_list = []
+    for i in range(repeat):
+        start_time = time.time()
+        module.run(data=data)
+        running_time = time.time() - start_time
+        time_list.append(running_time)
+
+    res = np.median(np.array(time_list[1:]))
     return res
 
 
