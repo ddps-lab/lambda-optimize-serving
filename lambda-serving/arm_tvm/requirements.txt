@@ -10,9 +10,4 @@ xgboost
 psutil
 cloudpickle
 
-onnx
-protobuf
-onnxruntime
-
 Pillow
-request_toolbelt
