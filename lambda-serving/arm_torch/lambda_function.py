@@ -4,13 +4,14 @@ from json import load
 import numpy as np
 import os
 import boto3
+import hashlib
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
 def load_model(model_name, batchsize):
     s3_client = boto3.client('s3')
-
+    
     import torch
     os.makedirs(os.path.dirname(f'/tmp/base/{model_name}/'), exist_ok=True)
     s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model.pt', f'/tmp/base/{model_name}/model.pt')
@@ -55,9 +56,11 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event['user_email']
     convert_time = event['convert_time']
-
+    
+    hashed_value = hardware + framework + optimizer + model_name
+    hashed_model = hashlib.sha256(hashed_value).hexdigest()
     if optimizer == "base" and hardware == "arm":
-        res = base_serving(model_name, batchsize)
+        res = base_serving(hashed_model, batchsize)
         running_time = time.time() - start_time
         return {
             'model_name': model_name,
