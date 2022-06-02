@@ -22,7 +22,7 @@ def load_model(model_name):
 
     return model
 
-def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
+def optimize_tvm(model,model_name,batchsize,imgsize=224,layout="NHWC"):
     import tvm
     from tvm import relay
 
@@ -76,13 +76,11 @@ def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
 def lambda_handler(event, context):    
     model_name = event['model_name']
     batchsize = event['batchsize']
-    target = event['target']
-
     start_time = time.time()
     model = load_model(model_name)
 
     print("Hardware optimize - Torch model to TVM model")
-    convert_time = optimize_tvm(model,model_name,batchsize,target)
+    convert_time = optimize_tvm(model,model_name,batchsize)
 
 
     running_time = time.time() - start_time
