@@ -5,7 +5,6 @@ import numpy as np
 import os
 import boto3
 import torch
-import hashlib
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
@@ -61,12 +60,7 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"
     print("export done :",f"{model_name}_{batchsize}.tar")
     convert_time = time.time() - convert_start_time
     
-
-
-    info = f'armtorchtvm{model_name}{batchsize}'
-    # hinfo = hashlib.sha256(info.encode())
-    
-    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{info}_{model_size}.tar')
+    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{model_name}_{model_size}.tar')
     print("S3 upload done")
 
     return convert_time
@@ -81,27 +75,12 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
-    start_time = time.time()
     
-    model = load_model(model_name,model_size)
 
-    print("Hardware optimize - Torch model to TVM model")
-    convert_time = optimize_tvm(model,model_name,batchsize,model_size)
-
-
-    running_time = time.time() - start_time
-    return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
-
-
-
-model_name = "resnet50"
-model_size = "97.8"
-hardware = "arm"
-framework = "torch"
-optimizer = "tvm"
-batchsize = 1
-user_email = "subean@"
-lambda_memory = 2048
-
-model = load_model(model_name,model_size)
-convert_time = optimize_tvm(model,model_name,batchsize,model_size)
+    if "arm" in optimizer and "tvm" in optimizer:
+        start_time = time.time()
+        model = load_model(model_name,model_size)
+        print("Hardware optimize - Torch model to TVM model")
+        convert_time = optimize_tvm(model,model_name,batchsize,model_size)
+        running_time = time.time() - start_time
+        return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
