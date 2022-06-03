@@ -8,30 +8,27 @@ import boto3
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
-def load_model(model_name, batchsize):
+def load_model(model_name, model_size):
     s3_client = boto3.client('s3')
 
     import torch
-    os.makedirs(os.path.dirname(f'/tmp/base/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model.pt', f'/tmp/base/{model_name}/model.pt')
-    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model_state_dict.pt',
-                            f'/tmp/base/{model_name}/model_state_dict.pt')
+    os.makedirs(os.path.dirname(f'/tmp/base/{model_name}_{model_size}/'), exist_ok=True)
+    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}_{model_size}/model.pt', f'/tmp/base/{model_name}_{model_size}/model.pt')
 
-    PATH = f"/tmp/base/{model_name}/"
+    PATH = f"/tmp/base/{model_name}_{model_size}/"
     model = torch.load(PATH + 'model.pt')
-    model.load_state_dict(torch.load(PATH + 'model_state_dict.pt'))
 
     return model
 
 
-def base_serving(model_name, batchsize, imgsize=224, repeat=10):
+def base_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     import torch
     # random data
     input_shape = (batchsize, 3, imgsize, imgsize)
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
-    model = load_model(model_name, batchsize)
+    model = load_model(model_name, model_size)
     model.eval()
 
     time_list = []
@@ -47,7 +44,9 @@ def base_serving(model_name, batchsize, imgsize=224, repeat=10):
 
 def lambda_handler(event, context):
     start_time = time.time()
+
     model_name = event['model_name']
+    model_size = event['model_size']
     hardware = event['hardware']
     framework = event['framework']
     optimizer = event['optimizer']
@@ -56,11 +55,12 @@ def lambda_handler(event, context):
     user_email = event['user_email']
     convert_time = event['convert_time']
 
-    if optimizer == "base" and hardware == "intel":
-        res = base_serving(model_name, batchsize)
+    if "base" in optimizer and "intel" in hardware:
+        res = base_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
         return {
             'model_name': model_name,
+            'model_size': model_size,
             'hardware': hardware,
             'framework': framework,
             'optimizer': optimizer,
