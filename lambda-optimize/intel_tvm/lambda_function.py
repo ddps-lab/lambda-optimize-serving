@@ -5,7 +5,6 @@ import numpy as np
 import os
 import boto3
 import torch
-import hashlib
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
@@ -20,7 +19,7 @@ def load_model(model_name,model_size):
 
     return model
 
-def optimize_tvm(model,model_name,batchsize,imgsize=224,layout="NHWC"):
+def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"):
     import tvm
     from tvm import relay
 
@@ -58,13 +57,8 @@ def optimize_tvm(model,model_name,batchsize,imgsize=224,layout="NHWC"):
     lib.export_library(f"/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar")
     print("export done :",f"{model_name}_{batchsize}.tar")
     convert_time = time.time() - convert_start_time
-    
-
-
-    info = f'inteltorchtvm{model_name}{batchsize}'
-    # hinfo = hashlib.sha256(info.encode())
-    
-    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{info}.tar')
+   
+    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{model_name}_{model_size}.tar')
     print("S3 upload done")
 
     return convert_time
@@ -80,15 +74,13 @@ def lambda_handler(event, context):
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
 
-    start_time = time.time()
-    model = load_model(model_name,model_size)
-
-    print("Hardware optimize - Torch model to TVM model")
-    convert_time = optimize_tvm(model,model_name,batchsize)
-
-
-    running_time = time.time() - start_time
-    return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
+    if "intel" in hardware and "tvm" in optimizer:
+        start_time = time.time()
+        model = load_model(model_name,model_size)
+        print("Hardware optimize - Torch model to TVM model")
+        convert_time = optimize_tvm(model,model_name,batchsize,model_size)
+        running_time = time.time() - start_time
+        return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
 
 
 
