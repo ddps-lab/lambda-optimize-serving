@@ -8,19 +8,19 @@ import boto3
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
-def load_model(model_name, batchsize):
+def load_model(model_name, model_size):
     s3_client = boto3.client('s3')
 
     os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/{model_name}_{batchsize}.tar',
-                            f'/tmp/tvm/{model_name}_{batchsize}.tar')
+    s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/{model_name}_{model_size}.tar',
+                            f'/tmp/tvm/{model_name}_{model_size}.tar')
 
-    model = f"/tmp/tvm/{model_name}_{batchsize}.tar"
+    model = f"/tmp/tvm/{model_name}_{model_size}.tar"
 
     return model
 
 
-def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
+def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     import tvm
     from tvm import relay
     import tvm.contrib.graph_executor as runtime
@@ -31,13 +31,13 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
 
-    model_path = load_model(model_name, batchsize)
+    model_path = load_model(model_name, model_size)
     loaded_lib = tvm.runtime.load_module(model_path)
     
     target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
     dev = tvm.device(target, 0)
     module = runtime.GraphModule(loaded_lib["default"](dev))
-    data = np.random.uniform(-1, 1, size=data_shape).astype("float32")
+    data = np.random.uniform(-1, 1, size=input_shape).astype("float32")
     data = tvm.nd.array(data, dev)
     module.set_input(input_name, data)
     
@@ -55,6 +55,7 @@ def tvm_serving(model_name, batchsize, imgsize=224, repeat=10):
 def lambda_handler(event, context):
     start_time = time.time()
     model_name = event['model_name']
+    model_size = event['model_size']
     hardware = event['hardware']
     framework = event['framework']
     optimizer = event['optimizer']
@@ -64,10 +65,11 @@ def lambda_handler(event, context):
     convert_time = event['convert_time']
 
     if optimizer == "tvm" and hardware == "arm":
-        res = tvm_serving(model_name, batchsize)
+        res = tvm_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
         return {
             'model_name': model_name,
+            'model_size': model_size,
             'hardware': hardware,
             'framework': framework,
             'optimizer': optimizer,
