@@ -66,7 +66,7 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"
     info = f'armtorchtvm{model_name}{batchsize}'
     # hinfo = hashlib.sha256(info.encode())
     
-    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{hinfo.hexdigest()}_{model_size}.tar')
+    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{info}_{model_size}.tar')
     print("S3 upload done")
 
     return convert_time
@@ -91,3 +91,17 @@ def lambda_handler(event, context):
 
     running_time = time.time() - start_time
     return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
+
+
+
+model_name = "resnet50"
+model_size = "97.8"
+hardware = "arm"
+framework = "torch"
+optimizer = "tvm"
+batchsize = 1
+user_email = "subean@"
+lambda_memory = 2048
+
+model = load_model(model_name,model_size)
+convert_time = optimize_tvm(model,model_name,batchsize,model_size)
