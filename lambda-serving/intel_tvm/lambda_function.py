@@ -64,7 +64,7 @@ def lambda_handler(event, context):
     user_email = event['user_email']
     convert_time = event['convert_time']
 
-    if optimizer == "tvm" and hardware == "intel":
+    if "tvm" in optimizer and "intel" in hardware:
         res = tvm_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
         return {
