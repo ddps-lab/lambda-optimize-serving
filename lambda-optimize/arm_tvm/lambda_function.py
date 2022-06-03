@@ -77,7 +77,7 @@ def lambda_handler(event, context):
     lambda_memory = event['lambda_memory']
     
 
-    if "arm" in optimizer and "tvm" in optimizer:
+    if "arm" in hardware and "tvm" in optimizer:
         start_time = time.time()
         model = load_model(model_name,model_size)
         print("Hardware optimize - Torch model to TVM model")
