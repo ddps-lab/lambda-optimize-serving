@@ -11,18 +11,16 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
 
 
-def load_model(model_name):    
+def load_model(model_name,model_size):    
     os.makedirs(os.path.dirname(f'/tmp/torch/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model.pt', f'/tmp/torch/{model_name}/model.pt')
-    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}/model_state_dict.pt', f'/tmp/torch/{model_name}/model_state_dict.pt')
+    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}_{model_size}/model.pt', f'/tmp/torch/{model_name}/model.pt')
         
     PATH = f"/tmp/torch/{model_name}/"
     model = torch.load(PATH+'model.pt')
-    model.load_state_dict(torch.load(PATH + 'model_state_dict.pt'))
 
     return model
 
-def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
+def optimize_tvm(model,model_name,batchsize,imgsize=224,layout="NHWC"):
     import tvm
     from tvm import relay
 
@@ -50,6 +48,7 @@ def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
     else:
         assert layout == "NCHW"
 
+    target = "llvm -mcpu=core-avx2"
     with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
         mod = relay.transform.InferType()(mod)
         lib = relay.build(mod, target=target, params=params)
@@ -62,10 +61,10 @@ def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
     
 
 
-    info = f'torch_{model_name}_{batchsize}'
-    hinfo = hashlib.sha256(info.encode())
+    info = f'inteltorchtvm{model_name}{batchsize}'
+    # hinfo = hashlib.sha256(info.encode())
     
-    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{hinfo.hexdigest()}.tar')
+    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{info}.tar')
     print("S3 upload done")
 
     return convert_time
@@ -73,18 +72,23 @@ def optimize_tvm(model,model_name,batchsize,target,imgsize=224,layout="NHWC"):
 
 def lambda_handler(event, context):    
     model_name = event['model_name']
+    model_size = event['model_size']
+    hardware = event['hardware']
+    framework = event['framework']
+    optimizer = event['optimizer']
     batchsize = event['batchsize']
-    target = event['target']
+    user_email = event ['user_email']
+    lambda_memory = event['lambda_memory']
 
     start_time = time.time()
-    model = load_model(model_name)
+    model = load_model(model_name,model_size)
 
     print("Hardware optimize - Torch model to TVM model")
-    convert_time = optimize_tvm(model,model_name,batchsize,target)
+    convert_time = optimize_tvm(model,model_name,batchsize)
 
 
     running_time = time.time() - start_time
-    return {'model':model_name,'batchsize':batchsize, 'framework':'torch','handler_time': running_time , 'convert_time':convert_time}
+    return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
 
 
 
