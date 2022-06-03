@@ -21,7 +21,7 @@ def load_model(model_name,model_size):
     return model
 
 
-def optimize_onnx(model,model_name,batchsize,imgsize=224,repeat=10):
+def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
     import torch.onnx
     import hashlib
     # 원본 모델 
@@ -40,15 +40,12 @@ def optimize_onnx(model,model_name,batchsize,imgsize=224,repeat=10):
 
     torch_out = torch.onnx._export(model, inputs, output_onnx, export_params=True, verbose=False,
                                 input_names=input_names, output_names=output_names)
-    
     convert_time = time.time()-convert_start_time
     print("Convert Complete")
 
-    info = f'inteltorchonnx{model_name}{batchsize}'
-    # hinfo = hashlib.sha256(info.encode())
-    
+
     #s3에 업로드 
-    s3_client.upload_file(f'/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx',BUCKET_NAME,f'models/onnx/{info}.onnx')
+    s3_client.upload_file(f'/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx',BUCKET_NAME,f'models/onnx/{model_name}_{model_size}.onnx')
     print("S3 upload done")
 
     return convert_time
@@ -63,11 +60,10 @@ def lambda_handler(event, context):
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
 
-    model = load_model(model_name,model_size)
-
-    start_time = time.time()
-    print("Model optimize - Torch model to ONNX model")
-    convert_time = optimize_onnx(model,model_name,batchsize)
-
-    running_time = time.time() - start_time
-    return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
+    if "onnx" in optimizer:
+        start_time = time.time()
+        model = load_model(model_name,model_size)
+        print("Model optimize - Torch model to ONNX model")
+        convert_time = optimize_onnx(model,model_name,batchsize,model_size)
+        running_time = time.time() - start_time
+        return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
