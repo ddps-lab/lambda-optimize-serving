@@ -80,7 +80,18 @@ def lambda_handler(event, context):
         print("Hardware optimize - Torch model to TVM model")
         convert_time = optimize_tvm(model,model_name,batchsize,model_size)
         running_time = time.time() - start_time
-        return {'model':model_name,'framework':framework,'hardware':hardware,'optimizer':optimizer, 'batchsize':batchsize, 'user_email':user_email,'lambda_memory':lambda_memory,'convert_time':convert_time ,'handler_time': running_time }
-
-
+    else:
+        convert_time = 0
+        
+    return {
+            'model_name': model_name,
+            'model_size': model_size,
+            'hardware': hardware,
+            'framework': framework,
+            'optimizer': optimizer,
+            'lambda_memory': lambda_memory,
+            'batchsize': batchsize,
+            'user_email': user_email,
+            'convert_time': convert_time
+        }
 
