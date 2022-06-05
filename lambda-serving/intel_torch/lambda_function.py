@@ -53,7 +53,6 @@ def lambda_handler(event, context):
     lambda_memory = event['lambda_memory']
     batchsize = event['batchsize']
     user_email = event['user_email']
-    convert_time = event['convert_time']
 
     if "base" in optimizer and "intel" in hardware:
         res = base_serving(model_name, model_size, batchsize)
@@ -68,7 +67,6 @@ def lambda_handler(event, context):
             'batchsize': batchsize,
             'user_email': user_email,
             'execute': True,
-            'convert_time': convert_time,
             'inference_time': running_time
         }
     else:
