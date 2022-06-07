@@ -62,9 +62,9 @@ def lambda_handler(event, context):
         return {
             'model_name': model_name,
             'model_size': model_size,
-            'hardware': "base",
+            'hardware': "arm",
             'framework': framework,
-            'optimizer': "arm",
+            'optimizer': "base",
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
