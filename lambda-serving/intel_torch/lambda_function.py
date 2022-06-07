@@ -67,6 +67,7 @@ def lambda_handler(event, context):
             'batchsize': batchsize,
             'user_email': user_email,
             'execute': True,
+            'convert_time': 0,
             'inference_time': running_time
         }
     else:
