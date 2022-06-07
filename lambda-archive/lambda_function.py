@@ -37,4 +37,4 @@ def lambda_handler(event, context):
             pass
 
 
-    return {"upload inference results done"}
+    return { 'result':'upload done'}
