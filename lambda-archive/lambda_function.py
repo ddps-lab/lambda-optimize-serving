@@ -13,7 +13,7 @@ def upload_data(info):
     optimizer = info['optimizer']
     batchsize = info['batchsize']
     lambda_memory = info['lambda_memory']
-    with open(f'./{model_name}_{model_size}_{batchsize}_{lambda_memory}.json','w') as f:
+    with open(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json','w') as f:
         json.dump(info, f, ensure_ascii=False, indent=4)  
     s3_client.upload_file(f'./{model_name}_{model_size}_{batchsize}_{lambda_memory}.json',BUCKET_NAME,f'results/{optimizer}/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json')
 
