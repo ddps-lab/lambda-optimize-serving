@@ -13,9 +13,10 @@ def upload_data(info):
     optimizer = info['optimizer']
     batchsize = info['batchsize']
     lambda_memory = info['lambda_memory']
+    hardware = info['hardware']
     with open(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json','w') as f:
         json.dump(info, f, ensure_ascii=False, indent=4)  
-    s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json',BUCKET_NAME,f'results/{optimizer}/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json')
+    s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json',BUCKET_NAME,f'results/{optimizer}/{hardware}/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json')
 
 def lambda_handler(event, context):    
     for i in range(len(event)):
@@ -29,7 +30,7 @@ def lambda_handler(event, context):
                 'lambda_memory':event[i]['lambda_memory'],
                 'batchsize':event[i]['batchsize'],
                 'convert_time':event[i]['convert_time'],
-                'infernece_time':event[i]['inference_time']
+                'inference_time':event[i]['inference_time']
             }
             upload_data(info)
         else:
@@ -37,4 +38,3 @@ def lambda_handler(event, context):
 
 
     return {"upload inference results done"}
-
