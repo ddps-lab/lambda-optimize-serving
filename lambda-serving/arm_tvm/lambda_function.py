@@ -21,6 +21,7 @@ def load_model(model_name, model_size):
 
 
 def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
+    tvm_time = time.time()
     import tvm
     from tvm import relay
     import tvm.contrib.graph_executor as runtime
@@ -30,9 +31,11 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
         imgsize == 299
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
-
+    
+    load_time = time.time()
     model_path = load_model(model_name, model_size)
     loaded_lib = tvm.runtime.load_module(model_path)
+    print("model_load_time : ",time.time()-load_time)
     
     target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
     dev = tvm.device(target, 0)
@@ -47,7 +50,8 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
         module.run(data=data)
         running_time = time.time() - start_time
         time_list.append(running_time)
-
+    print("tvm_end2end_time : ",time.time()-tvm_time)
+    
     res = np.median(np.array(time_list[1:]))
     return res
 
@@ -78,7 +82,8 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': convert_time,
-            'inference_time': running_time
+            'inference_time': res,
+            'handler_time':running_time
         }
     else:
         return {
