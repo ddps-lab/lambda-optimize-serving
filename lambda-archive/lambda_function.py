@@ -30,7 +30,8 @@ def lambda_handler(event, context):
                 'lambda_memory':event[i]['lambda_memory'],
                 'batchsize':event[i]['batchsize'],
                 'convert_time':event[i]['convert_time'],
-                'inference_time':event[i]['inference_time']
+                'inference_time':event[i]['inference_time'],
+                'handler_time':event[i]['handler_time']
             }
             upload_data(info)
         else:
