@@ -34,8 +34,9 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     model_path = load_model(model_name, model_size)
     loaded_lib = tvm.runtime.load_module(model_path)
     
-    target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
-    dev = tvm.device(target, 0)
+    #target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
+    #dev = tvm.device(target, 0)
+    dev = tvm.cpu()
     module = runtime.GraphModule(loaded_lib["default"](dev))
     data = np.random.uniform(-1, 1, size=input_shape).astype("float32")
     data = tvm.nd.array(data, dev)
