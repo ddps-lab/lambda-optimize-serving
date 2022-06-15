@@ -25,6 +25,7 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     import tvm
     from tvm import relay
     import tvm.contrib.graph_executor as runtime
+    print("tvm import time : ",time.time()-tvm_time)
 
     input_name = "input0"
     if model_name == "inception_v3":
