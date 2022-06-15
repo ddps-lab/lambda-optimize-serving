@@ -75,7 +75,8 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': convert_time,
-            'inference_time': running_time
+            'inference_time': res,
+            'handler_time': running_time
         }
     else:
         return {
