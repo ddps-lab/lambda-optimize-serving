@@ -2,6 +2,7 @@
 
 import time
 from json import load
+import json
 import os
 import boto3
 
@@ -50,6 +51,35 @@ def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
 
     return convert_time
 
+def ses_send(user_email,info):
+    dst_format = {"ToAddresses":[f"{user_email}"],
+    "CcAddresses":[],
+    "BccAddresses":[]}
+
+    dfile_path = "/tmp/destination.json"
+
+    with open(dfile_path, 'w', encoding='utf-8') as file:
+        json.dump(dst_format, file)
+
+    message_format = {
+                        "Subject": {
+                            "Data": "AYCI : AllYouCanInference results mail",
+                            "Charset": "UTF-8"
+                        },
+                        "Body": {
+                            "Text": {
+                                "Data": f"AYCI convert time results\n---------------------------------------\n{info['model_name']} convert to ONNX Done!\n{info['model_name']} size : {info['model_size']} MB\nConvert {info['model_name']} latency : {round(info['convert_time'],4)} s",
+                                "Charset": "UTF-8"
+                            },
+                        }
+                    }
+    mfile_path = "/tmp/message.json"
+
+    with open(mfile_path, 'w', encoding='utf-8') as mfile:
+        json.dump(message_format, mfile)
+
+    os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
+
 def lambda_handler(event, context):    
     model_name = event['model_name']
     model_size = event['model_size']
@@ -59,15 +89,31 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
+    convert_time = 0
+
+    info = {
+            'model_name': model_name,
+            'model_size': model_size,
+            'hardware': hardware,
+            'framework': framework,
+            'optimizer': optimizer,
+            'lambda_memory': lambda_memory,
+            'batchsize': batchsize,
+            'user_email': user_email,
+            'convert_time': convert_time
+        }
 
     if "onnx" in optimizer:
         start_time = time.time()
         model = load_model(model_name,model_size)
+        load_time = time.time() - start_time
+        print("Model load time : ",load_time)
+
         print("Model optimize - Torch model to ONNX model")
         convert_time = optimize_onnx(model,model_name,batchsize,model_size)
-        running_time = time.time() - start_time
-    else:
-        convert_time = 0
+        info['convert_time'] = convert_time
+
+        ses_send(user_email,info)
         
     return {
             'model_name': model_name,
@@ -80,3 +126,4 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'convert_time': convert_time
         }
+
