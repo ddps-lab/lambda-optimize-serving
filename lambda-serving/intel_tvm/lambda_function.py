@@ -5,8 +5,8 @@ import numpy as np
 import os
 import boto3
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME')
-
+# BUCKET_NAME = os.environ.get('BUCKET_NAME')
+BUCKET_NAME='ayci'
 
 def load_model(model_name, model_size):
     s3_client = boto3.client('s3')
@@ -82,7 +82,6 @@ def ses_send(user_email,info):
 
 
 def lambda_handler(event, context):
-    start_time = time.time()
     model_name = event['model_name']
     model_size = event['model_size']
     hardware = event['hardware']
@@ -108,6 +107,7 @@ def lambda_handler(event, context):
         }
 
     if "tvm" in optimizer and "intel" in hardware:
+        start_time = time.time()
         res = tvm_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
         info['inference_time']=running_time
