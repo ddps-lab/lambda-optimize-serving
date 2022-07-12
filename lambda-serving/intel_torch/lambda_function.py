@@ -73,7 +73,6 @@ def ses_send(user_email,info):
 
 
 def lambda_handler(event, context):
-    start_time = time.time()
 
     model_name = event['model_name']
     model_size = event['model_size']
@@ -100,6 +99,7 @@ def lambda_handler(event, context):
         
 
     if "base" in optimizer and "intel" in hardware:
+        start_time = time.time()
         res = base_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
         info['inference_time']=running_time
