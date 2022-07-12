@@ -88,7 +88,9 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event['user_email']
     convert_time = event['convert_time']
-    
+    request_id = context['aws_request_id']
+    log_group_name = context['log_group_name']
+
     info = {
             'model_name': model_name,
             'model_size': model_size,
@@ -121,7 +123,9 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': convert_time,
-            'inference_time': running_time
+            'inference_time': running_time,
+            'request_id' : request_id,
+            'log_group_name' : log_group_name
         }
     else:
         return {

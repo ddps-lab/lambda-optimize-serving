@@ -9,6 +9,7 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
 def load_model(model_name, model_size):
+    load_start = time.time()
     s3_client = boto3.client('s3')
 
     os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
@@ -16,7 +17,7 @@ def load_model(model_name, model_size):
                             f'/tmp/tvm/{model_name}_{model_size}.tar')
 
     model = f"/tmp/tvm/{model_name}_{model_size}.tar"
-
+    print(time.time() - load_start)
     return model
 
 
@@ -93,6 +94,8 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event['user_email']
     convert_time = event['convert_time']
+    request_id = context['aws_request_id']
+    log_group_name = context['log_group_name']
 
     info = {
             'model_name': model_name,
@@ -111,6 +114,7 @@ def lambda_handler(event, context):
     if "tvm" in optimizer and "arm" in hardware:
         start_time = time.time()
         res = tvm_serving(model_name, model_size, batchsize)
+        print('res: ', res)
         running_time = time.time() - start_time
         info['inference_time'] = running_time
 
@@ -127,7 +131,9 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': convert_time,
-            'inference_time': running_time
+            'inference_time': running_time,
+            'request_id' : request_id,
+            'log_group_name' : log_group_name
         }
     else:
         return {
