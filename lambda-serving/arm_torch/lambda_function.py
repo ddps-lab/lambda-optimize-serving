@@ -83,8 +83,8 @@ def lambda_handler(event, context):
     lambda_memory = event['lambda_memory']
     batchsize = event['batchsize']
     user_email = event['user_email']
-    request_id = context['aws_request_id']
-    log_group_name = context['log_group_name']
+    request_id = context.aws_request_id
+    log_group_name = context.log_group_name
 
     info = {
                 'model_name': model_name,
