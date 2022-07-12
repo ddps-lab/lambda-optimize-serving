@@ -35,8 +35,9 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     model_path = load_model(model_name, model_size)
     loaded_lib = tvm.runtime.load_module(model_path)
     
-    target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
-    dev = tvm.device(target, 0)
+    #target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
+    #dev = tvm.device(target, 0)
+    dev = tvm.cpu()
     module = runtime.GraphModule(loaded_lib["default"](dev))
     data = np.random.uniform(-1, 1, size=input_shape).astype("float32")
     data = tvm.nd.array(data, dev)
@@ -52,6 +53,35 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     res = np.median(np.array(time_list[1:]))
     return res
 
+def ses_send(user_email,info):
+    dst_format = {"ToAddresses":[f"{user_email}"],
+    "CcAddresses":[],
+    "BccAddresses":[]}
+
+    dfile_path = "/tmp/destination.json"
+
+    with open(dfile_path, 'w', encoding='utf-8') as file:
+        json.dump(dst_format, file)
+
+    message_format = {
+                        "Subject": {
+                            "Data": "AYCI : AllYouCanInference results mail",
+                            "Charset": "UTF-8"
+                        },
+                        "Body": {
+                            "Text": {
+                                "Data": f"AYCI convert time results\n---------------------------------------\n{info['model_name']} convert using TVM on ARM \n{info['model_name']} size : {info['model_size']} MB\nConvert {info['model_name']} latency : {round(info['convert_time'],4)} s\n\nAYCI inference time results\n---------------------------------------\n{info['model_name']} inference Done!\n{info['model_name']} size : {info['model_size']} MB\nLambda memory size : {info['lambda_memory']}\nInference batchsize : {info['batchsize']}\nInference {info['model_name']} latency on ARM: {round(info['inference_time'],4)} s",
+                                "Charset": "UTF-8"
+                            },
+                        }
+                    }
+    mfile_path = "/tmp/message.json"
+
+    with open(mfile_path, 'w', encoding='utf-8') as mfile:
+        json.dump(message_format, mfile)
+
+    os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
+
 
 def lambda_handler(event, context):
     start_time = time.time()
@@ -65,10 +95,29 @@ def lambda_handler(event, context):
     user_email = event['user_email']
     convert_time = event['convert_time']
 
+    info = {
+            'model_name': model_name,
+            'model_size': model_size,
+            'hardware': "intel",
+            'framework': framework,
+            'optimizer': "tvm",
+            'lambda_memory': lambda_memory,
+            'batchsize': batchsize,
+            'user_email': user_email,
+            'execute': True,
+            'convert_time': convert_time,
+            'inference_time': 0
+        }
+
     if "tvm" in optimizer and "arm" in hardware:
+        start_time = time.time()
         res = tvm_serving(model_name, model_size, batchsize)
         print('res: ', res)
         running_time = time.time() - start_time
+        info['inference_time'] = running_time
+
+        ses_send(user_email,info)
+
         return {
             'model_name': model_name,
             'model_size': model_size,
