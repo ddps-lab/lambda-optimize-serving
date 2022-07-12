@@ -89,12 +89,7 @@ def lambda_handler(event, context):
     user_email = event['user_email']
     convert_time = event['convert_time']
     
-    if "onnx" in optimizer and "intel" in hardware:
-        start_time = time.time()
-        res = onnx_serving(model_name, model_size, batchsize)
-        running_time = time.time() - start_time
-
-        info = {
+    info = {
             'model_name': model_name,
             'model_size': model_size,
             'hardware': "intel",
@@ -105,8 +100,14 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': convert_time,
-            'inference_time': running_time
+            'inference_time': 0
         }
+
+    if "onnx" in optimizer and "intel" in hardware:
+        start_time = time.time()
+        res = onnx_serving(model_name, model_size, batchsize)
+        running_time = time.time() - start_time
+        info['inference_time']=running_time
 
         ses_send(user_email,info)
         return {
