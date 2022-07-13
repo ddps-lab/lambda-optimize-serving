@@ -18,6 +18,7 @@ def getMemoryUsed(info):
     max_memory_used = 0
 
     while response == None or len(response['results']) == 0:
+        time.sleep(5)
         start_query_response = log_client.start_query(
             logGroupName=log_group_name,
             startTime=int((datetime.today() - timedelta(hours=1)).timestamp()),
