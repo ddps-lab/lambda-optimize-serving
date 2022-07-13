@@ -13,6 +13,7 @@ def getMemoryUsed(info):
     request_id = info['request_id']
     log_group_name = info['log_group_name']
 
+    print(request_id)
     query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId='{request_id}' | filter @maxMemoryUsed like ''"
     response = None
     max_memory_used = 0
