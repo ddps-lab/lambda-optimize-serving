@@ -30,6 +30,7 @@ def getMemoryUsed(info):
         )
 
     max_memory_used = 0
+    print(response)
     res = response['results'][0]
     for r in res:
         if r['field'] == '@maxMemoryUsed':
