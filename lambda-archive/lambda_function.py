@@ -14,27 +14,30 @@ def getMemoryUsed(info):
     log_group_name = info['log_group_name']
 
     query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId='{request_id}' | filter @maxMemoryUsed like ''"
-    start_query_response = log_client.start_query(
-        logGroupName=log_group_name,
-        startTime=int((datetime.today() - timedelta(hours=1)).timestamp()),
-        endTime=int(datetime.now().timestamp()),
-        queryString=query,
-    )
-    query_id = start_query_response['queryId']
-
     response = None
-    while response == None or response['status'] == 'Running' or len(response['results']) == 0:
-        time.sleep(1)
-        response = log_client.get_query_results(
-            queryId=query_id
-        )
-
     max_memory_used = 0
-    print(response)
-    res = response['results'][0]
-    for r in res:
-        if r['field'] == '@maxMemoryUsed':
-            max_memory_used = int(r['value']) / 1000000
+
+    while response == None or len(response['results']) == 0:
+        start_query_response = log_client.start_query(
+            logGroupName=log_group_name,
+            startTime=int((datetime.today() - timedelta(hours=1)).timestamp()),
+            endTime=int(datetime.now().timestamp()),
+            queryString=query,
+        )
+        query_id = start_query_response['queryId']
+
+        while response == None or response['status'] == 'Running':
+            time.sleep(1)
+            response = log_client.get_query_results(
+                queryId=query_id
+            )
+        if len(response['results']) == 0:
+            continue
+
+        res = response['results'][0]
+        for r in res:
+            if r['field'] == '@maxMemoryUsed':
+                max_memory_used = int(r['value']) / 1000000
 
     return max_memory_used
 
