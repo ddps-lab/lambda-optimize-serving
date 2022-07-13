@@ -11,3 +11,4 @@ psutil
 cloudpickle
 
 Pillow
+awscli
