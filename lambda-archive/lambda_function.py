@@ -64,6 +64,7 @@ def lambda_handler(event, context):
                 'inference_time':event[i]['inference_time'],
                 'request_id':event[i]['request_id'],
                 'log_group_name':event[i]['log_group_name']
+                'handler_time':event[i]['handler_time']
             }
             upload_data(info)
             max_memory_used = getMemoryUsed(info)

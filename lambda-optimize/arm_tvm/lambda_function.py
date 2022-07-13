@@ -47,10 +47,10 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"
     else:
         assert layout == "NCHW"
 
-    target = tvm.target.arm_cpu()
-    # target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
+    #target = tvm.target.arm_cpu()
+    target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
     
-    with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
+    with tvm.transform.PassContext(opt_level=3):
         mod = relay.transform.InferType()(mod)
         lib = relay.build(mod, target=target, params=params)
 
