@@ -13,7 +13,7 @@ def getMemoryUsed(info):
     request_id = info['request_id']
     log_group_name = info['log_group_name']
 
-    query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId={request_id} | filter @maxMemoryUsed like ''"
+    query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId='{request_id}' | filter @maxMemoryUsed like ''"
     start_query_response = log_client.start_query(
         logGroupName=log_group_name,
         startTime=int((datetime.today() - timedelta(hours=1)).timestamp()),
