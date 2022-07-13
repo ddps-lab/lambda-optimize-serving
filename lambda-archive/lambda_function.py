@@ -23,7 +23,7 @@ def getMemoryUsed(info):
     query_id = start_query_response['queryId']
 
     response = None
-    while response == None or start_query_response['status'] == 'Running':
+    while response == None or response['status'] == 'Running':
         time.sleep(1)
         response = log_client.get_query_results(
             queryId=query_id
