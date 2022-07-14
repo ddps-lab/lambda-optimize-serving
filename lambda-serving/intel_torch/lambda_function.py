@@ -75,7 +75,6 @@ def lambda_handler(event, context):
             'request_id' : request_id,
             'log_group_name' : log_group_name
             'inference_time': res,
-            'handler_time':running_time
         }
     else:
         return {
