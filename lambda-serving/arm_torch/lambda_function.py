@@ -43,36 +43,6 @@ def base_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     res = np.median(np.array(time_list[1:]))
     return res
 
-def ses_send(user_email,info):
-    dst_format = {"ToAddresses":[f"{user_email}"],
-    "CcAddresses":[],
-    "BccAddresses":[]}
-
-    dfile_path = "/tmp/destination.json"
-
-    with open(dfile_path, 'w', encoding='utf-8') as file:
-        json.dump(dst_format, file)
-
-    message_format = {
-                        "Subject": {
-                            "Data": "AYCI : AllYouCanInference results mail",
-                            "Charset": "UTF-8"
-                        },
-                        "Body": {
-                            "Text": {
-                                "Data": f"AYCI inference time results\n---------------------------------------\n{info['model_name']} inference Done!\n{info['model_name']} size : {info['model_size']} MB\nLambda memory size : {info['lambda_memory']}\nInference batchsize : {info['batchsize']}\nInference {info['model_name']} latency on ARM: {round(info['inference_time'],4)} s",
-                                "Charset": "UTF-8"
-                            },
-                        }
-                    }
-
-    mfile_path = "/tmp/message.json"
-
-    with open(mfile_path, 'w', encoding='utf-8') as mfile:
-        json.dump(message_format, mfile)
-
-    os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
-
 def lambda_handler(event, context):
 
     model_name = event['model_name']
@@ -86,26 +56,10 @@ def lambda_handler(event, context):
     request_id = context.aws_request_id
     log_group_name = context.log_group_name
 
-    info = {
-                'model_name': model_name,
-                'model_size': model_size,
-                'hardware': "intel",
-                'framework': framework,
-                'optimizer': "base",
-                'lambda_memory': lambda_memory,
-                'batchsize': batchsize,
-                'user_email': user_email,
-                'execute': True,
-                'convert_time': 0,
-                'inference_time': 0
-            }
     if "base" in optimizer and "arm" in hardware:
         start_time = time.time()
         res = base_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
-        info['inference_time'] = running_time
-
-        ses_send(user_email,info)
 
         return {
             'model_name': model_name,
