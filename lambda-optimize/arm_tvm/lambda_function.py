@@ -76,17 +76,7 @@ def lambda_handler(event, context):
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
-    info = {
-                'model_name': model_name,
-                'model_size': model_size,
-                'hardware': hardware,
-                'framework': framework,
-                'optimizer': optimizer,
-                'lambda_memory': lambda_memory,
-                'batchsize': batchsize,
-                'user_email': user_email,
-                'convert_time': convert_time
-            }
+    
     if "arm" in hardware and "tvm" in optimizer:
         start_time = time.time()
         model = load_model(model_name,model_size)
@@ -95,7 +85,6 @@ def lambda_handler(event, context):
 
         print("Hardware optimize - Torch model to TVM model")
         convert_time = optimize_tvm(model,model_name,batchsize,model_size)
-        info['convert_time'] = convert_time
 
     return {
             'model_name': model_name,
