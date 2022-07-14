@@ -20,8 +20,8 @@ def getMemoryUsed(info):
 
     start_query_response = log_client.start_query(
         logGroupName=log_group_name,
-        startTime=int((datetime.today() - timedelta(hours=5)).timestamp()),
-        endTime=int(datetime.now().timestamp()),
+        startTime=int((datetime.today() - timedelta(hours=24)).timestamp()),
+        endTime=int((datetime.now() + timedelta(hours=24)).timestamp()),
         queryString=query,
     )
     query_id = start_query_response['queryId']
