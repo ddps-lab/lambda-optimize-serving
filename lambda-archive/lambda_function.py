@@ -18,29 +18,25 @@ def getMemoryUsed(info):
     response = None
     max_memory_used = 0
 
-    while response == None or len(response['results']) == 0:
-        time.sleep(5)
-        start_query_response = log_client.start_query(
-            logGroupName=log_group_name,
-            startTime=int((datetime.today() - timedelta(hours=5)).timestamp()),
-            endTime=int(datetime.now().timestamp()),
-            queryString=query,
+    start_query_response = log_client.start_query(
+        logGroupName=log_group_name,
+        startTime=int((datetime.today() - timedelta(hours=5)).timestamp()),
+        endTime=int(datetime.now().timestamp()),
+        queryString=query,
+    )
+    query_id = start_query_response['queryId']
+    print(query_id)
+    while response == None or response['status'] == 'Running':
+        time.sleep(1)
+        response = log_client.get_query_results(
+            queryId=query_id
         )
-        query_id = start_query_response['queryId']
-        print(query_id)
-        while response == None or response['status'] == 'Running':
-            time.sleep(1)
-            response = log_client.get_query_results(
-                queryId=query_id
-            )
-        print(response)
-        if len(response['results']) == 0:
-            continue
+    print(response)
 
-        res = response['results'][0]
-        for r in res:
-            if r['field'] == '@maxMemoryUsed':
-                max_memory_used = int(r['value']) / 1000000
+    res = response['results'][0]
+    for r in res:
+        if r['field'] == '@maxMemoryUsed':
+            max_memory_used = int(r['value']) / 1000000
 
     return max_memory_used
 
