@@ -13,7 +13,6 @@ def getMemoryUsed(info):
     request_id = info['request_id']
     log_group_name = info['log_group_name']
 
-    print(request_id)
     query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId='{request_id}' | filter @maxMemoryUsed like ''"
     response = None
     max_memory_used = 0
@@ -25,13 +24,11 @@ def getMemoryUsed(info):
         queryString=query,
     )
     query_id = start_query_response['queryId']
-    print(query_id)
     while response == None or response['status'] == 'Running':
         time.sleep(1)
         response = log_client.get_query_results(
             queryId=query_id
         )
-    print(response)
 
     res = response['results'][0]
     for r in res:
