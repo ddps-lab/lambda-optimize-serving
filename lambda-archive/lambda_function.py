@@ -95,7 +95,7 @@ def lambda_handler(event, context):
                 'convert_time':event[i]['convert_time'],
                 'inference_time':event[i]['inference_time'],
                 'request_id':event[i]['request_id'],
-                'log_group_name':event[i]['log_group_name']
+                'log_group_name':event[i]['log_group_name'],
                 'handler_time':event[i]['handler_time']
             }
             upload_data(info)
