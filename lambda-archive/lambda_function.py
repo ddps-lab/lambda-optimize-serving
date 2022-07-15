@@ -48,10 +48,42 @@ def upload_data(info):
         json.dump(info, f, ensure_ascii=False, indent=4)  
     s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json',BUCKET_NAME,f'results/{optimizer}/{hardware}/{model_name}_{model_size}_{batchsize}_{lambda_memory}.json')
 
+def ses_send(user_email,info,max_memory_used):
+    dst_format = {"ToAddresses":[f"{user_email}"],
+    "CcAddresses":[],
+    "BccAddresses":[]}
+
+    dfile_path = "/tmp/destination.json"
+
+    with open(dfile_path, 'w', encoding='utf-8') as file:
+        json.dump(dst_format, file)
+
+    message_format = {
+                        "Subject": {
+                            "Data": "AYCI : AllYouCanInference results mail",
+                            "Charset": "UTF-8"
+                        },
+                        "Body": {
+                            "Text": {
+                                "Data": f"AYCI convert time results\n---------------------------------------\n{info['model_name']} convert using {info['optimizer'].upper()} on {info['hardware'].upper()} \n{info['model_name']} size : {info['model_size']} MB\nConvert {info['model_name']} latency : {round(info['convert_time'],4)} s\n\nAYCI inference time results\n---------------------------------------\n{info['model_name']} inference Done!\n{info['model_name']} size : {info['model_size']} MB\nInference batchsize : {info['batchsize']}\nInference {info['model_name']} latency on {info['hardware'].upper()}: {round(info['inference_time'],4)} s\n-----------------------------------------------\nLambda memory size : {info['lambda_memory']}\nMax Memory Used : {max_memory_used}",
+                                "Charset": "UTF-8"
+                            },
+                        }
+                    }
+    mfile_path = "/tmp/message.json"
+
+    with open(mfile_path, 'w', encoding='utf-8') as mfile:
+        json.dump(message_format, mfile)
+
+    os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
+
+    
+    
 def lambda_handler(event, context):
 
     for i in range(len(event)):
         if event[i]['execute'] :
+            user_email = event[i]['user_email']
             info = {
                 'model_name':event[i]['model_name'],
                 'model_size':event[i]['model_size'],
@@ -68,6 +100,8 @@ def lambda_handler(event, context):
             upload_data(info)
             max_memory_used = getMemoryUsed(info)
             print(max_memory_used)
+            ses_send(user_email,info,max_memory_used)
+
         else:
             pass
 
