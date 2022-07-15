@@ -1,0 +1,5 @@
+numpy
+boto3
+pytest
+python-dotenv
+awscli
