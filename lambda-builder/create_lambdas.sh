@@ -16,7 +16,7 @@ for serv in $arm_serving; do
 
     aws lambda create-function --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
       --package-type Image \
-      --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv'_'$lm:latest \
+      --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv:latest \
       --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
       --architectures arm64 \
       --memory-size $lm \
@@ -33,7 +33,7 @@ for serv in $intel_serving; do
 
     aws lambda create-function --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
       --package-type Image \
-      --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv'_'$lm:latest \
+      --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv:latest \
       --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
       --architectures x86_64 \
       --memory-size $lm \
