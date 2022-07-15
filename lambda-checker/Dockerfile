@@ -12,9 +12,9 @@ WORKDIR lambda-optimize-serving
 RUN git init
 RUN git config core.sparseCheckout true
 RUN git remote add -f origin https://github.com/subeans/lambda-optimize-serving
-RUN echo lambda-archive/* >> .git/info/sparse-checkout
+RUN echo lambda-checker/* >> .git/info/sparse-checkout
 RUN git pull origin main
-WORKDIR lambda-archive
+WORKDIR lambda-checker
 
 RUN pip3 install -r requirements.txt
 
