@@ -72,17 +72,27 @@ def ses_send(user_email,info , optimizer,hardware):
 
 
 def lambda_handler(event, context):
-
+    const queryParam = event.querySTringParameters.myParam
     info = {
-            'model_name':event['model_name'],
-            'model_size':event['model_size'],
-            'hardware':event['hardware'],
-            'framework':event['framework'],
-            'optimizer':event['optimizer'],
-            'lambda_memory':event['lambda_memory'],
-            'batchsize':event['batchsize'],
-            'user_email':event['user_email']
+            'model_name':event.querySTringParameters.model_name,
+            'model_size':event.querySTringParameters.model_size,
+            'hardware':event.querySTringParameters.hardware,
+            'framework':event.querySTringParameters.framework,
+            'optimizer':event.querySTringParameters.optimizer,
+            'lambda_memory':event.querySTringParameters.lambda_memory,
+            'batchsize':event.querySTringParameters.batchsize,
+            'user_email':event.querySTringParameters.user_email
         }
+    # info = {
+    #         'model_name':event['model_name'],
+    #         'model_size':event['model_size'],
+    #         'hardware':event['hardware'],
+    #         'framework':event['framework'],
+    #         'optimizer':event['optimizer'],
+    #         'lambda_memory':event['lambda_memory'],
+    #         'batchsize':event['batchsize'],
+    #         'user_email':event['user_email']
+    #     }
 
     exist = check_results(info,info['optimizer'],info['hardware'])
     
