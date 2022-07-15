@@ -2,7 +2,7 @@
 lambda_memory="512 1024 2048 4096 8192 10240"
 
 for lm in $lambda_memory; do
-  aws create-state-machine --name "ayci_"$lm \
+  aws cli create-state-machine --name "ayci_"$lm \
       --role-arn arn:aws:iam::741926482963:role/service-role/StepFunctions-Serverless_Inference_System-role-a3b1f8ca \
       --definition "{
   "Comment": "A description of my state machine",
