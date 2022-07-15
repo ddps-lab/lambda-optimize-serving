@@ -8,7 +8,7 @@ import io
 import pickle
 
 
-BUCKET_NAME = os.environ.get('BUCKET_NAME'
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
 s3 = boto3.resource('s3') 
 
