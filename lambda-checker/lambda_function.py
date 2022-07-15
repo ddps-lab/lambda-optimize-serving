@@ -81,11 +81,7 @@ def lambda_handler(event, context):
             'optimizer':event['optimizer'],
             'lambda_memory':event['lambda_memory'],
             'batchsize':event['batchsize'],
-            'convert_time':event['convert_time'],
-            'inference_time':event['inference_time'],
-            'request_id':event['request_id'],
-            'log_group_name':event['log_group_name'],
-            'handler_time':event['handler_time']
+            'user_email':event['user_email']
         }
 
     exist = check_results(info,info['optimizer'],info['hardware'])
