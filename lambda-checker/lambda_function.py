@@ -72,7 +72,6 @@ def ses_send(user_email,info , optimizer,hardware):
 
 
 def lambda_handler(event, context):
-    const queryParam = event.querySTringParameters.myParam
     info = {
             'model_name':event.querySTringParameters.model_name,
             'model_size':event.querySTringParameters.model_size,
