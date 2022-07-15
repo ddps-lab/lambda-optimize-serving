@@ -13,23 +13,23 @@ def getMemoryUsed(info):
     request_id = info['request_id']
     log_group_name = info['log_group_name']
 
-    query = f"fields @maxMemoryUsed \ | sort @timestamp desc \ | filter @requestId={request_id} \| filter @maxMemoryUsed like ''"
+    query = f"fields @maxMemoryUsed | sort @timestamp desc | filter @requestId='{request_id}' | filter @maxMemoryUsed like ''"
+    response = None
+    max_memory_used = 0
+
     start_query_response = log_client.start_query(
         logGroupName=log_group_name,
-        startTime=int((datetime.today() - timedelta(hours=1)).timestamp()),
-        endTime=int(datetime.now().timestamp()),
+        startTime=int((datetime.today() - timedelta(hours=24)).timestamp()),
+        endTime=int((datetime.now() + timedelta(hours=24)).timestamp()),
         queryString=query,
     )
     query_id = start_query_response['queryId']
-
-    response = None
     while response == None or response['status'] == 'Running':
         time.sleep(1)
         response = log_client.get_query_results(
             queryId=query_id
         )
 
-    max_memory_used = 0
     res = response['results'][0]
     for r in res:
         if r['field'] == '@maxMemoryUsed':
@@ -77,8 +77,8 @@ def ses_send(user_email,info,max_memory_used):
 
     os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
 
-
-
+    
+    
 def lambda_handler(event, context):
 
     for i in range(len(event)):
@@ -95,18 +95,16 @@ def lambda_handler(event, context):
                 'convert_time':event[i]['convert_time'],
                 'inference_time':event[i]['inference_time'],
                 'request_id':event[i]['request_id'],
-                'log_group_name':event[i]['log_group_name'],
-                'max_memory_used':0
+                'log_group_name':event[i]['log_group_name']
             }
             max_memory_used = getMemoryUsed(info)
+            print(max_memory_used)
             info['max_memory_used'] = max_memory_used
             upload_data(info)
-            print(info)
             ses_send(user_email,info,info['max_memory_used'])
+
         else:
             pass
 
 
     return { 'result':'upload done'}
-
-
