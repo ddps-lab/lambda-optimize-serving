@@ -22,7 +22,7 @@ for serv in $arm_serving; do
       --memory-size $lm \
       --timeout 240
 
-    sleep 5
+    sleep 60
 
     aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
       --environment "Variables={BUCKET_NAME=ayci}"
@@ -44,7 +44,7 @@ for serv in $intel_serving; do
       --memory-size $lm \
       --timeout 240
 
-    sleep 5
+    sleep 60
 
     aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
       --environment "Variables={BUCKET_NAME=ayci}"
