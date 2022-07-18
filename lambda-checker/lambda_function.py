@@ -72,7 +72,7 @@ def ses_send(user_email,info , optimizer,hardware):
 
 
 def lambda_handler(event, context):
-    print(info)
+    print(event)
     info = {
             'model_name':event['body']['model_name'],
             'model_size':event['body']['model_size'],
