@@ -72,16 +72,17 @@ def ses_send(user_email,info , optimizer,hardware):
 
 
 def lambda_handler(event, context):
-
+    body = json.loads(event['body'])
+#     print(body)
     info = {
-            'model_name':event['model_name'],
-            'model_size':event['model_size'],
-            'hardware':event['hardware'],
-            'framework':event['framework'],
-            'optimizer':event['optimizer'],
-            'lambda_memory':event['lambda_memory'],
-            'batchsize':event['batchsize'],
-            'user_email':event['user_email']
+            'model_name':body['model_name'],
+            'model_size':body['model_size'],
+            'hardware':body['hardware'],
+            'framework':body['framework'],
+            'optimizer':body['optimizer'],
+            'lambda_memory':body['lambda_memory'],
+            'batchsize':body['batchsize'],
+            'user_email':body['user_email']
         }
 
     exist = check_results(info,info['optimizer'],info['hardware'])
