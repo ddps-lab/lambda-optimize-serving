@@ -19,7 +19,7 @@ def load_model(model_name,model_size):
     model = torch.load(PATH+'model.pt')
     return model
 
-def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"):
+def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"):
     import tvm
     from tvm import relay
 
