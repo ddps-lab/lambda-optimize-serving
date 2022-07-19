@@ -69,15 +69,15 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"
 def lambda_handler(event, context):    
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = event['hardware']
+    hardware = "arm"
     framework = event['framework']
-    optimizer = event['optimizer']
+    optimizer = event['configuration'][hardware]
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
     
-    if "arm" in hardware and "tvm" in optimizer:
+    if "tvm" in optimizer:
         start_time = time.time()
         model = load_model(model_name,model_size)
         load_time = time.time() - start_time
@@ -89,9 +89,8 @@ def lambda_handler(event, context):
     return {
             'model_name': model_name,
             'model_size': model_size,
-            'hardware': hardware,
+            'configuration': event['configuration'],
             'framework': framework,
-            'optimizer': optimizer,
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
