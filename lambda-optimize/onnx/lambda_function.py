@@ -55,15 +55,14 @@ def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
 def lambda_handler(event, context):    
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = event['hardware']
     framework = event['framework']
-    optimizer = event['optimizer']
+    configuration = event['configuration']
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
 
-    if "onnx" in optimizer:
+    if "onnx" in configuration["intel"] or "onnx" in configuration["arm"]:
         start_time = time.time()
         model = load_model(model_name,model_size)
         load_time = time.time() - start_time
@@ -75,9 +74,8 @@ def lambda_handler(event, context):
     return {
             'model_name': model_name,
             'model_size': model_size,
-            'hardware': hardware,
+            'configuration': configuration,
             'framework': framework,
-            'optimizer': optimizer,
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,

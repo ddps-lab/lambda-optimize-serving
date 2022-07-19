@@ -50,9 +50,9 @@ def onnx_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
 def lambda_handler(event, context):
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = event['hardware']
+    hardware = "arm"
     framework = event['framework']
-    optimizer = event['optimizer']
+    optimizer = event['configuration'][hardware]
     lambda_memory = event['lambda_memory']
     batchsize = event['batchsize']
     user_email = event['user_email']
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
     log_group_name = context.log_group_name
 
    
-    if "onnx" in optimizer and "arm" in hardware:
+    if "onnx" in optimizer:
         start_time = time.time()
         res = onnx_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
