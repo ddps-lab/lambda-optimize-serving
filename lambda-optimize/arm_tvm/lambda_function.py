@@ -47,10 +47,10 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"
     else:
         assert layout == "NCHW"
 
-    #target = tvm.target.arm_cpu()
-    target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
+    target = tvm.target.arm_cpu()
+    # target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
     
-    with tvm.transform.PassContext(opt_level=3):
+    with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
         mod = relay.transform.InferType()(mod)
         lib = relay.build(mod, target=target, params=params)
 
@@ -65,18 +65,19 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"
 
     return convert_time
 
+    
 def lambda_handler(event, context):    
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = event['hardware']
+    hardware = "arm"
     framework = event['framework']
-    optimizer = event['optimizer']
+    optimizer = event['configuration'][hardware]
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
-
-    if "arm" in hardware and "tvm" in optimizer:
+    
+    if "tvm" in optimizer:
         start_time = time.time()
         model = load_model(model_name,model_size)
         load_time = time.time() - start_time
@@ -88,9 +89,8 @@ def lambda_handler(event, context):
     return {
             'model_name': model_name,
             'model_size': model_size,
-            'hardware': hardware,
+            'configuration': event['configuration'],
             'framework': framework,
-            'optimizer': optimizer,
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
