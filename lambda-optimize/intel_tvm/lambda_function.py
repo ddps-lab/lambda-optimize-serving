@@ -11,13 +11,18 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
 
 
-def load_model(model_name,model_size):    
-    os.makedirs(os.path.dirname(f'/tmp/torch/{model_name}/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}_{model_size}/model.pt', f'/tmp/torch/{model_name}/model.pt')
-        
-    PATH = f"/tmp/torch/{model_name}/"
-    model = torch.load(PATH+'model.pt')
+def load_model(framework,model_name,model_size):    
+    import onnx
+    os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
+    PATH = f"/tmp/{framework}/{model_name}_{model_size}/"
 
+    if "onnx" in framework :
+        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}.onnx', f'/tmp/{framework}/{model_name}_{model_size}/model.onnx')
+        model = onnx.load(PATH+'model.onnx')
+    else:
+        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}/model.pt', f'/tmp/{framework}/{model_name}_{model_size}/model.pt')
+        model = torch.load(PATH+'model.pt')
+   
     return model
 
 def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"):
@@ -25,15 +30,18 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"
     from tvm import relay
 
     input_shape = (batchsize, 3, imgsize, imgsize)
-
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
-    torch_data = torch.tensor(data_array)
-
-    model.eval()
-    traced_model = torch.jit.trace(model, torch_data)
-
-    convert_start_time = time.time()
-    mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
+    
+    if "onnx" in framework:   
+        shape_dict = {"input0": data_array.shape}
+        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
+        framework="onnx"
+    else:
+        torch_data = torch.tensor(data_array)
+        model.eval()
+        traced_model = torch.jit.trace(model, torch_data)
+        mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
+        framework="torch"
 
     if layout == "NHWC":
         desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
@@ -49,17 +57,18 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"
         assert layout == "NCHW"
 
     target = "llvm -mcpu=core-avx2"
+    
+    convert_start_time = time.time()
     with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
         mod = relay.transform.InferType()(mod)
         lib = relay.build(mod, target=target, params=params)
-
 
     os.makedirs(os.path.dirname(f'/tmp/tvm/intel/{model_name}/'), exist_ok=True)
     lib.export_library(f"/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar")
     print("export done :",f"{model_name}_{batchsize}.tar")
     convert_time = time.time() - convert_start_time
    
-    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{model_name}_{model_size}.tar')
+    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{framework}/{model_name}_{model_size}.tar')
     print("S3 upload done")
 
     return convert_time
@@ -76,14 +85,13 @@ def lambda_handler(event, context):
     convert_time = 0
 
     if "tvm" in optimizer:
-
         start_time = time.time()
-        model = load_model(model_name,model_size)
+        model = load_model(framework,model_name,model_size)
         load_time = time.time() - start_time
         print("Model load time : ",load_time)
 
-        print("Hardware optimize - Torch model to TVM model")
-        convert_time = optimize_tvm(model,model_name,batchsize,model_size)
+    print(f"Hardware optimize - {framework} model to TVM model")
+        convert_time = optimize_tvm(framework,model,model_name,batchsize,model_size)
 
     return {
             'model_name': model_name,
@@ -95,4 +103,3 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'convert_time': convert_time
         }
-
