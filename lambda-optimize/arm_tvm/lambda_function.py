@@ -16,9 +16,11 @@ def load_model(framework,model_name,model_size):
     PATH = f"/tmp/{framework}/{model_name}_{model_size}/"
 
     if "onnx" in framework :
+        framework="onnx"
         s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}.onnx', f'/tmp/{framework}/{model_name}_{model_size}/model.onnx')
         model = onnx.load(PATH+'model.onnx')
     else:
+        framework="torch"
         s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}/model.pt', f'/tmp/{framework}/{model_name}_{model_size}/model.pt')
         model = torch.load(PATH+'model.pt')
    
