@@ -5,8 +5,7 @@ import numpy as np
 import os
 import boto3
 
-# BUCKET_NAME = os.environ.get('BUCKET_NAME')
-BUCKET_NAME='ayci'
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 def load_model(model_name, model_size):
     s3_client = boto3.client('s3')
