@@ -73,7 +73,7 @@ def ses_send(user_email,info , optimizer,hardware):
 
 def lambda_handler(event, context):
     body = json.loads(event['body'])
-    print(body)
+#     print(body)
     info = {
             'model_name':body['model_name'],
             'model_size':body['model_size'],

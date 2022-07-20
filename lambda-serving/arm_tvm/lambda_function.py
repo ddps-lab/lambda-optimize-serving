@@ -25,6 +25,11 @@ def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"
 
     input_shape = (batchsize, 3, imgsize, imgsize)
 
+    res = np.median(np.array(time_list[1:]))
+    return res
+
+def lambda_handler(event, context):
+    start_time = time.time()
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     torch_data = torch.tensor(data_array)
 
@@ -72,19 +77,17 @@ def lambda_handler(event, context):
     hardware = "arm"
     framework = event['framework']
     optimizer = event['configuration'][hardware]
-    batchsize = event['batchsize']
-    user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
-    convert_time = 0
-    
+    batchsize = event['batchsize']
+    user_email = event['user_email']
+    convert_time = event['convert_time']
+    request_id = context.aws_request_id
+    log_group_name = context.log_group_name
+
     if "tvm" in optimizer:
         start_time = time.time()
-        model = load_model(model_name,model_size)
-        load_time = time.time() - start_time
-        print("Model load time : ",load_time)
-
-        print("Hardware optimize - Torch model to TVM model")
-        convert_time = optimize_tvm(model,model_name,batchsize,model_size)
+        res = tvm_serving(model_name, model_size, batchsize)
+        running_time = time.time() - start_time
 
     return {
             'model_name': model_name,

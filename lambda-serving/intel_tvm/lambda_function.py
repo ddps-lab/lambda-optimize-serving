@@ -60,9 +60,9 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
 def lambda_handler(event, context):
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = event['hardware']
+    hardware = "intel"
     framework = event['framework']
-    optimizer = event['optimizer']
+    optimizer = event['configuration'][hardware]
     lambda_memory = event['lambda_memory']
     batchsize = event['batchsize']
     user_email = event['user_email']
@@ -70,8 +70,7 @@ def lambda_handler(event, context):
     request_id = context.aws_request_id
     log_group_name = context.log_group_name
 
-
-    if "tvm" in optimizer and "intel" in hardware:
+    if "tvm" in optimizer:
         start_time = time.time()
         res = tvm_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
