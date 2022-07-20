@@ -16,31 +16,32 @@ def load_model(framework,model_name,model_size):
     os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
     PATH = f"/tmp/{framework}/{model_name}_{model_size}/"
 
-    if framework == "torch":
-        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}/model.pt', f'/tmp/{framework}/{model_name}_{model_size}/model.pt')
-        model = torch.load(PATH+'model.pt')
-    elif framework == "onnx" :
+    if "onnx" in framework :
         s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}.onnx', f'/tmp/{framework}/{model_name}_{model_size}/model.onnx')
         model = onnx.load(PATH+'model.onnx')
-
+    else:
+        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}/model.pt', f'/tmp/{framework}/{model_name}_{model_size}/model.pt')
+        model = torch.load(PATH+'model.pt')
+   
     return model
 
-def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NHWC"):
+def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"):
     import tvm
     from tvm import relay
 
     input_shape = (batchsize, 3, imgsize, imgsize)
     data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
     
-    if framework == "torch":
+    if "onnx" in framework:   
+        shape_dict = {"input0": data_array.shape}
+        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
+        framework="onnx"
+    else:
         torch_data = torch.tensor(data_array)
         model.eval()
         traced_model = torch.jit.trace(model, torch_data)
         mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
-
-    elif framework == "onnx":   
-        shape_dict = {"input0": data_array.shape}
-        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
+        framework="torch"
 
     if layout == "NHWC":
         desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
