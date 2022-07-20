@@ -12,8 +12,6 @@ s3_client = boto3.client('s3')
 
 def load_model(framework,model_name,model_size):    
     import onnx
-    os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
-
     if "onnx" in framework :
         framework = "onnx"
         os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
