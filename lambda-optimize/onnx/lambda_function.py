@@ -63,6 +63,7 @@ def lambda_handler(event, context):
     convert_time = 0
 
     if "onnx" in configuration["intel"] or "onnx" in configuration["arm"]:
+
         start_time = time.time()
         model = load_model(model_name,model_size)
         load_time = time.time() - start_time

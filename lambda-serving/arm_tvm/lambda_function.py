@@ -1,60 +1,77 @@
+# image-classification converter 
+
 import time
-import json
-from json import load
 import numpy as np
 import os
 import boto3
+import torch
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
+s3_client = boto3.client('s3') 
 
 
-def load_model(model_name, model_size):
-    load_start = time.time()
-    s3_client = boto3.client('s3')
-
-    os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/{model_name}_{model_size}.tar',
-                            f'/tmp/tvm/{model_name}_{model_size}.tar')
-
-    model = f"/tmp/tvm/{model_name}_{model_size}.tar"
-    print(time.time() - load_start)
+def load_model(model_name,model_size):   
+    # h_model_name=hashlib.sha256(model_name.encode() )  
+    os.makedirs(os.path.dirname(f'/tmp/torch/{model_name}/'), exist_ok=True)
+    s3_client.download_file(BUCKET_NAME, f'models/torch/{model_name}_{model_size}/model.pt', f'/tmp/torch/{model_name}/model.pt')
+        
+    PATH = f"/tmp/torch/{model_name}/"
+    model = torch.load(PATH+'model.pt')
     return model
 
-
-def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
+def optimize_tvm(model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"):
     import tvm
     from tvm import relay
-    import tvm.contrib.graph_executor as runtime
 
-    input_name = "input0"
-    if model_name == "inception_v3":
-        imgsize == 299
     input_shape = (batchsize, 3, imgsize, imgsize)
-    output_shape = (batchsize, 1000)
-
-    model_path = load_model(model_name, model_size)
-    loaded_lib = tvm.runtime.load_module(model_path)
-    
-    #target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
-    #dev = tvm.device(target, 0)
-    dev = tvm.cpu()
-    module = runtime.GraphModule(loaded_lib["default"](dev))
-    data = np.random.uniform(-1, 1, size=input_shape).astype("float32")
-    data = tvm.nd.array(data, dev)
-    module.set_input(input_name, data)
-    
-    time_list = []
-    for i in range(repeat):
-        start_time = time.time()
-        module.run(data=data)
-        running_time = time.time() - start_time
-        time_list.append(running_time)
 
     res = np.median(np.array(time_list[1:]))
     return res
 
 def lambda_handler(event, context):
     start_time = time.time()
+    data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
+    torch_data = torch.tensor(data_array)
+
+    model.eval()
+    traced_model = torch.jit.trace(model, torch_data)
+
+    convert_start_time = time.time()
+    mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
+
+    if layout == "NHWC":
+        desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
+        seq = tvm.transform.Sequential(
+            [
+                relay.transform.RemoveUnusedFunctions(),
+                relay.transform.ConvertLayout(desired_layouts),
+            ]
+        )
+        with tvm.transform.PassContext(opt_level=3):
+            mod = seq(mod)
+    else:
+        assert layout == "NCHW"
+
+    target = tvm.target.arm_cpu()
+    # target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
+    
+    with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
+        mod = relay.transform.InferType()(mod)
+        lib = relay.build(mod, target=target, params=params)
+
+
+    os.makedirs(os.path.dirname(f'/tmp/tvm/arm/{model_name}/'), exist_ok=True)
+    lib.export_library(f"/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar")
+    print("export done :",f"{model_name}_{batchsize}.tar")
+    convert_time = time.time() - convert_start_time
+    
+    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{model_name}_{model_size}.tar')
+    print("S3 upload done")
+
+    return convert_time
+
+    
+def lambda_handler(event, context):    
     model_name = event['model_name']
     model_size = event['model_size']
     hardware = "arm"
@@ -72,22 +89,13 @@ def lambda_handler(event, context):
         res = tvm_serving(model_name, model_size, batchsize)
         running_time = time.time() - start_time
 
-        return {
+    return {
             'model_name': model_name,
             'model_size': model_size,
-            'hardware': "arm",
+            'configuration': event['configuration'],
             'framework': framework,
-            'optimizer': "tvm",
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
-            'execute': True,
-            'convert_time': convert_time,
-            'inference_time': running_time,
-            'request_id' : request_id,
-            'log_group_name' : log_group_name
-        }
-    else:
-        return {
-            'execute': False
+            'convert_time': convert_time
         }
