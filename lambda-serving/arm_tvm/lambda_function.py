@@ -8,20 +8,24 @@ import boto3
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
-def load_model(model_name, model_size):
+def load_model(framework,model_name, model_size):
     load_start = time.time()
     s3_client = boto3.client('s3')
-
+    
     os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
-    s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/{model_name}_{model_size}.tar',
-                            f'/tmp/tvm/{model_name}_{model_size}.tar')
+    if "onnx" in framework:
+        s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/onnx/{model_name}_{model_size}.tar',
+                                f'/tmp/tvm/{model_name}_{model_size}.tar')
+    else:
+        s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/{model_name}_{model_size}.tar',
+                                f'/tmp/tvm/{model_name}_{model_size}.tar')
 
     model = f"/tmp/tvm/{model_name}_{model_size}.tar"
     print(time.time() - load_start)
     return model
 
 
-def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
+def tvm_serving(framework,model_name, model_size, batchsize, imgsize=224, repeat=10):
     import tvm
     from tvm import relay
     import tvm.contrib.graph_executor as runtime
@@ -32,7 +36,7 @@ def tvm_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     input_shape = (batchsize, 3, imgsize, imgsize)
     output_shape = (batchsize, 1000)
 
-    model_path = load_model(model_name, model_size)
+    model_path = load_model(framework,model_name, model_size)
     loaded_lib = tvm.runtime.load_module(model_path)
     
     #target = "llvm -device=arm_cpu -mtriple=aarch64-linux-gnu"
@@ -69,7 +73,7 @@ def lambda_handler(event, context):
 
     if "tvm" in optimizer:
         start_time = time.time()
-        res = tvm_serving(model_name, model_size, batchsize)
+        res = tvm_serving(framework,model_name, model_size, batchsize)
         running_time = time.time() - start_time
 
         return {
