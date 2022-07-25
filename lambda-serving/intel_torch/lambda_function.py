@@ -41,6 +41,7 @@ def base_serving(model_name, model_size, batchsize, imgsize=224, repeat=10):
     res = np.median(np.array(time_list[1:]))
     return res
 
+
 def lambda_handler(event, context):
 
     model_name = event['model_name']
@@ -70,9 +71,9 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'execute': True,
             'convert_time': 0,
-            'inference_time': running_time,
             'request_id' : request_id,
             'log_group_name' : log_group_name
+            'inference_time': res,
         }
     else:
         return {
