@@ -41,7 +41,7 @@ def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_le
     if wtype == "img":   
         inputs = torch.randn(batchsize, 3, imgsize, imgsize)
 
-        torch.onnx._export(model, inputs, output_onnx, export_params=True, verbose=False,do_constant_folding=True,
+        torch.onnx.export(model, inputs, output_onnx, export_params=True, verbose=False,do_constant_folding=True,
                                 input_names=input_names, output_names=output_names,dynamic_axes= {'input0' : {0 : 'batch_size'},    # variable length axes
                                 'output0' : {0 : 'batch_size'}})
 
