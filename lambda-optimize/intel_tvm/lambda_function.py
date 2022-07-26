@@ -116,7 +116,7 @@ def lambda_handler(event, context):
         load_time = time.time() - start_time
         print("Model load time : ",load_time)
 
-    print(f"Hardware optimize - {framework} model to TVM model")
+        print(f"Hardware optimize - {framework} model to TVM model")
         convert_time = optimize_tvm(workload_type,framework,model,model_name,batchsize,model_size)
 
     return {
