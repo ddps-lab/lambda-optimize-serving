@@ -1,4 +1,4 @@
-# image-classification converter 
+# image-classification & nlp converter 
 
 import time
 import numpy as np
@@ -52,7 +52,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
         if wtype == "img":
             shape_dict = {"input0": data_array.shape}
         elif wtype == "nlp":
-            shape_dict = {"input0": [batch_size,seq_length]}
+            shape_dict = {"input0": [batchsize,seq_length]}
         mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
         
     elif "torch" in framework:
@@ -66,8 +66,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
         # torch nlp
         elif wtype == "nlp":
             traced_model = torch.jit.trace(model, tokens_tensor,segments_tensors)
-            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', [batch_size,seq_length])],default_dtype=dtype)
-
+            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', [batchsize,seq_length])],default_dtype="float32")
 
     if layout == "NHWC":
         desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
@@ -99,7 +98,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
 
     return convert_time
 
-def lambda_handler(event, context): 
+def lambda_handler(event, context):    
     workload_type = event['workload_type']
     model_name = event['model_name']
     model_size = event['model_size']
@@ -117,7 +116,7 @@ def lambda_handler(event, context):
         load_time = time.time() - start_time
         print("Model load time : ",load_time)
 
-    print(f"Hardware optimize - {framework} model to TVM model")
+        print(f"Hardware optimize - {framework} model to TVM model")
         convert_time = optimize_tvm(workload_type,framework,model,model_name,batchsize,model_size)
 
     return {
@@ -131,4 +130,3 @@ def lambda_handler(event, context):
             'user_email': user_email,
             'convert_time': convert_time
         }
-
