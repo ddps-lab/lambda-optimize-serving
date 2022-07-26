@@ -52,7 +52,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
         if wtype == "img":
             shape_dict = {"input0": data_array.shape}
         elif wtype == "nlp":
-            shape_dict = {"input0": [batch_size,seq_length]}
+            shape_dict = {"input0": [batchsize,seq_length]}
         mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
         
     elif "torch" in framework:
