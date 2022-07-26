@@ -49,7 +49,10 @@ def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_le
         inputs = np.random.randint(0, 2000, size=(seq_length))
         token_types = np.random.randint(0,2,size=(seq_length))
 
-        torch.onnx.export(model,(inputs,token_types), output_onnx, export_params=True, verbose=False,do_constant_folding=True,
+        tokens_tensor = torch.tensor(np.array([inputs]))
+        segments_tensors = torch.tensor(np.array([token_types]))
+
+        torch.onnx.export(model,(tokens_tensor,segments_tensors), output_onnx, export_params=True, verbose=False,do_constant_folding=True,
                                 input_names=input_names, output_names=output_names,dynamic_axes= {'input0' : {0 : 'batch_size'},    # variable length axes
                                 'output0' : {0 : 'batch_size'}})
 
