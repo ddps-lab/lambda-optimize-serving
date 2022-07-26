@@ -2,7 +2,7 @@
 
 import time
 from json import load
-import json
+import numpy as np
 import os
 import boto3
 
@@ -22,7 +22,7 @@ def load_model(model_name,model_size):
     return model
 
 
-def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
+def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_length=128):
     import torch.onnx
     import hashlib
     # 원본 모델 
@@ -37,10 +37,23 @@ def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
     convert_start_time = time.time()
     input_names = ["input0"]
     output_names = ["output0"]
-    inputs = torch.randn(batchsize, 3, imgsize, imgsize)
 
-    torch_out = torch.onnx._export(model, inputs, output_onnx, export_params=True, verbose=False,
-                                input_names=input_names, output_names=output_names)
+    if wtype == "img":   
+        inputs = torch.randn(batchsize, 3, imgsize, imgsize)
+
+        torch.onnx._export(model, inputs, output_onnx, export_params=True, verbose=False,do_constant_folding=True,
+                                input_names=input_names, output_names=output_names,dynamic_axes= {'input0' : {0 : 'batch_size'},    # variable length axes
+                                'output0' : {0 : 'batch_size'}})
+
+    elif wtype=="nlp":
+        inputs = np.random.randint(0, 2000, size=(seq_length))
+        token_types = np.random.randint(0,2,size=(seq_length))
+
+        torch.onnx.export(model,(inputs,token_types), output_onnx, export_params=True, verbose=False,do_constant_folding=True,
+                                input_names=input_names, output_names=output_names,dynamic_axes= {'input0' : {0 : 'batch_size'},    # variable length axes
+                                'output0' : {0 : 'batch_size'}})
+
+
     convert_time = time.time()-convert_start_time
     print("Convert Complete")
 
@@ -53,6 +66,7 @@ def optimize_onnx(model,model_name,batchsize,model_size,imgsize=224,repeat=10):
 
 
 def lambda_handler(event, context):    
+    workload_type = event['workload_type']
     model_name = event['model_name']
     model_size = event['model_size']
     framework = event['framework']
@@ -63,16 +77,16 @@ def lambda_handler(event, context):
     convert_time = 0
 
     if "onnx" in configuration["intel"] or "onnx" in configuration["arm"]:
-
         start_time = time.time()
         model = load_model(model_name,model_size)
         load_time = time.time() - start_time
         print("Model load time : ",load_time)
 
         print("Model optimize - Torch model to ONNX model")
-        convert_time = optimize_onnx(model,model_name,batchsize,model_size)
+        convert_time = optimize_onnx(workload_type,model,model_name,batchsize,model_size)
 
     return {
+            'workload_type':workload_type,
             'model_name': model_name,
             'model_size': model_size,
             'configuration': configuration,
