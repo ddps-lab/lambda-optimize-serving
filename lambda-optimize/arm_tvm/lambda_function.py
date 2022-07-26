@@ -64,7 +64,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
         # torch nlp
         elif wtype == "nlp":
             traced_model = torch.jit.trace(model, tokens_tensor,segments_tensors)
-            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', [batch_size,seq_length])],default_dtype=dtype)
+            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', [batchsize,seq_length])],default_dtype="float32")
 
         
     if layout == "NHWC":
