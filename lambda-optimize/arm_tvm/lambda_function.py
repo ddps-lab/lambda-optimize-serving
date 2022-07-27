@@ -27,23 +27,45 @@ def load_model(framework,model_name,model_size):
    
     return model
 
-def optimize_tvm(framework,model,model_name,batchsize,model_size,imgsize=224,layout="NCHW"):
+def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=224,seq_length=128, layout="NCHW"):
     import tvm
     from tvm import relay
 
-    input_shape = (batchsize, 3, imgsize, imgsize)
-    data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
-   
-    if "onnx" in framework:   
-        shape_dict = {"input0": data_array.shape}
-        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
-        framework="onnx"
-    else:
+    # ImageClf input 
+    if wtype == "img":
+        input_shape = (batchsize, 3, imgsize, imgsize)
+        data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
         torch_data = torch.tensor(data_array)
-        model.eval()
-        traced_model = torch.jit.trace(model, torch_data)
-        mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
+
+    # NLP input 
+    elif wtype == "nlp":
+        inputs = np.random.randint(0, 2000, size=(seq_length))
+        token_types = np.random.randint(0,2,size=(seq_length))
+
+        tokens_tensor = torch.tensor(np.array([inputs]))
+        segments_tensors = torch.tensor(np.array([token_types]))
+
+    if "onnx" in framework:   
+        framework="onnx"
+        if wtype == "img":
+            shape_dict = {"input0": data_array.shape}
+        elif wtype == "nlp":
+            shape_dict = {"input0": [batchsize,seq_length]}
+        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
+        
+    elif "torch" in framework:
         framework="torch"
+        model.eval()
+        # torch imageclf 
+        if wtype == "img":
+            traced_model = torch.jit.trace(model, torch_data)
+            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', input_shape)],default_dtype="float32")
+
+        # torch nlp
+        elif wtype == "nlp":
+            traced_model = torch.jit.trace(model, tokens_tensor,segments_tensors)
+            mod, params = relay.frontend.from_pytorch(traced_model, input_infos=[('input0', [batchsize,seq_length])],default_dtype="float32")
+
         
     if layout == "NHWC":
         desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
@@ -79,6 +101,7 @@ def optimize_tvm(framework,model,model_name,batchsize,model_size,imgsize=224,lay
 
     
 def lambda_handler(event, context):    
+    workload_type = event['workload_type']
     model_name = event['model_name']
     model_size = event['model_size']
     hardware = "arm"
@@ -96,9 +119,10 @@ def lambda_handler(event, context):
         print("Model load time : ",load_time)
 
         print(f"Hardware optimize - {framework} model to TVM model")
-        convert_time = optimize_tvm(framework,model,model_name,batchsize,model_size)
+        convert_time = optimize_tvm(workload_type,framework,model,model_name,batchsize,model_size)
 
     return {
+            'workload_type':workload_type,
             'model_name': model_name,
             'model_size': model_size,
             'configuration': event['configuration'],
