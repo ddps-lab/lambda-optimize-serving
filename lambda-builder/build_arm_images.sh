@@ -13,8 +13,8 @@ for serv in $serving; do
   docker tag $IMAGE_NAME'_'$serv $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv
   aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
   aws ecr delete-repository \
-  --repository-name $IMAGE_NAME'_'$serv \
-  --force
+    --repository-name $IMAGE_NAME'_'$serv \
+    --force
 
   sleep 5
 
@@ -22,5 +22,8 @@ for serv in $serving; do
     --repository-name $IMAGE_NAME'_'$serv \
     --image-scanning-configuration scanOnPush=true \
     --region us-west-2
+
+  sleep 5
+
   docker push $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv
 done

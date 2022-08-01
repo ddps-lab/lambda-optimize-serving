@@ -22,6 +22,9 @@ for serv in $serving; do
     --repository-name $IMAGE_NAME'_'$serv \
     --image-scanning-configuration scanOnPush=true \
     --region us-west-2
+
+  sleep 5
+
   docker push $ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_'$serv
 done
 
