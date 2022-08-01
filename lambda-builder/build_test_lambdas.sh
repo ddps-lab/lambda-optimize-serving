@@ -67,7 +67,7 @@ sleep 5
 
 aws lambda create-function --region us-west-2 --function-name $IMAGE_NAME'_intel_onnx' \
   --package-type Image \
-  --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_intel_onnx':latest \
+  --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_onnx':latest \
   --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
   --architectures x86_64 \
   --memory-size 4096 \
@@ -75,7 +75,7 @@ aws lambda create-function --region us-west-2 --function-name $IMAGE_NAME'_intel
 
 aws lambda create-function --region us-west-2 --function-name $IMAGE_NAME'_arm_onnx' \
   --package-type Image \
-  --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_arm_onnx':latest \
+  --code ImageUri=$ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/$IMAGE_NAME'_onnx':latest \
   --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
   --architectures arm64 \
   --memory-size 4096 \
