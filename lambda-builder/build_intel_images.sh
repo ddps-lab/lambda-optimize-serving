@@ -30,7 +30,7 @@ done
 
 export IMAGE_NAME="convert_torch"
 
-converting="intel_tvm arm_tvm intel_onnx"
+converting="intel_tvm intel_onnx"
 
 for serv in $converting; do
   docker build -f "../lambda-optimize/$serv/Dockerfile" -t $IMAGE_NAME'_'$serv . --no-cache
