@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# inference build
 export IMAGE_NAME="serving"
 export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
 
@@ -20,10 +21,6 @@ for serv in $arm_serving; do
     --memory-size 2048 \
     --timeout 240
 
-  sleep 60
-
-  aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv \
-    --environment "Variables={BUCKET_NAME=ayci}"
 done
 
 for serv in $intel_serving; do
@@ -40,12 +37,21 @@ for serv in $intel_serving; do
     --memory-size 2048 \
     --timeout 240
 
-  sleep 60
+done
 
+sleep 60
+
+for serv in $arm_serving; do
   aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv \
     --environment "Variables={BUCKET_NAME=ayci}"
 done
 
+for serv in $intel_serving; do
+  aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv \
+    --environment "Variables={BUCKET_NAME=ayci}"
+done
+
+# optimize build
 export IMAGE_NAME="convert_torch"
 
 aws lambda delete-function \
