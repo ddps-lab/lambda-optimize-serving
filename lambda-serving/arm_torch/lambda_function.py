@@ -71,6 +71,7 @@ def lambda_handler(event, context):
     log_group_name = context.log_group_name
 
     if "base" in optimizer:
+
         start_time = time.time()
         res = base_serving(workload_type, model_name, model_size, batchsize)
         running_time = time.time() - start_time
@@ -90,6 +91,7 @@ def lambda_handler(event, context):
             'inference_time': running_time,
             'request_id': request_id,
             'log_group_name': log_group_name
+
         }
     else:
         return {

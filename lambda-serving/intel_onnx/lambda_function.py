@@ -94,6 +94,7 @@ def lambda_handler(event, context):
             'inference_time': running_time,
             'request_id': request_id,
             'log_group_name': log_group_name
+
         }
     else:
         return {

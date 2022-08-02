@@ -55,7 +55,6 @@ def base_serving(wtype, model_name, model_size, batchsize, imgsize=224, repeat=1
     res = np.median(np.array(time_list[1:]))
     return res
 
-
 def lambda_handler(event, context):
     workload_type = event['workload_type']
     model_name = event['model_name']
