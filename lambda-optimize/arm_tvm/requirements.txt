@@ -10,3 +10,4 @@ xgboost
 psutil
 cloudpickle
 onnx
+pytorch_transformers
