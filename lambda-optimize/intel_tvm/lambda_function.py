@@ -102,15 +102,14 @@ def lambda_handler(event, context):
     workload_type = event['workload_type']
     model_name = event['model_name']
     model_size = event['model_size']
-    hardware = "intel"
     framework = event['framework']
-    optimizer = event['configuration'][hardware]
+    configuration = event['configuration']
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
 
-    if "tvm" in optimizer:
+    if "tvm" in configuration["intel"] :
         start_time = time.time()
         model = load_model(framework,model_name,model_size)
         load_time = time.time() - start_time
