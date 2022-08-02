@@ -6,3 +6,4 @@ awscli
 onnx
 protobuf
 onnxruntime
+pytorch_transformers
