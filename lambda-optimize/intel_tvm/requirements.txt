@@ -12,3 +12,4 @@ psutil
 cloudpickle
 
 onnx
+pytorch_transformers
