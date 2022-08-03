@@ -33,7 +33,7 @@ def getMemoryUsed(info):
     res = response['results'][0]
     for r in res:
         if r['field'] == '@maxMemoryUsed':
-            max_memory_used = int(r['value']) / 1000000
+            max_memory_used = int(float(r['value']) / 1000000)
 
     return max_memory_used
 
