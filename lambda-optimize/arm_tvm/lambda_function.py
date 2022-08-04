@@ -33,6 +33,8 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
 
     # ImageClf input 
     if wtype == "img":
+        if model_name=="inception_v3":
+            imgsize=299
         input_shape = (batchsize, 3, imgsize, imgsize)
         data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
         torch_data = torch.tensor(data_array)
@@ -94,7 +96,11 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
     print("export done :",f"{model_name}_{batchsize}.tar")
     convert_time = time.time() - convert_start_time
     
-    s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{framework}/{model_name}_{model_size}.tar')
+    if framework=="onnx":
+        s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/onnx/{model_name}_{model_size}.tar')
+    else:
+        s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{model_name}_{model_size}.tar')
+
     print("S3 upload done")
 
     return convert_time
