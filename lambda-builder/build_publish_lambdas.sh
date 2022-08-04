@@ -20,12 +20,8 @@ for serv in $arm_serving; do
       --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
       --architectures arm64 \
       --memory-size $lm \
+      --ephemeral-storage 4096 \
       --timeout 240
-
-    sleep 60
-
-    aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
-      --environment "Variables={BUCKET_NAME=ayci}"
   done
 done
 
@@ -42,13 +38,22 @@ for serv in $intel_serving; do
       --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
       --architectures x86_64 \
       --memory-size $lm \
+      --ephemeral-storage 4096 \
       --timeout 240
+  done
+done
 
-    sleep 60
 
+for serv in $arm_serving; do
+  for lm in $lambda_memory; do
     aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
       --environment "Variables={BUCKET_NAME=ayci}"
   done
 done
 
-
+for serv in $intel_serving; do
+  for lm in $lambda_memory; do
+    aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
+      --environment "Variables={BUCKET_NAME=ayci}"
+  done
+done
