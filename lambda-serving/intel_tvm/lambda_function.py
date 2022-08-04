@@ -19,7 +19,7 @@ def load_model(framework, model_name, model_size):
         s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/onnx/{model_name}_{model_size}.tar',
                                 f'/tmp/tvm/{model_name}_{model_size}.tar')
     else:
-        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/{model_name}_{model_size}.tar',
+        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/torch/{model_name}_{model_size}.tar',
                                 f'/tmp/tvm/{model_name}_{model_size}.tar')
 
     model = f"/tmp/tvm/{model_name}_{model_size}.tar"
