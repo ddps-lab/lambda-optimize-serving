@@ -20,7 +20,7 @@ for serv in $arm_serving; do
       --role arn:aws:iam::$ACCOUNT_ID:role/jg-efs-role \
       --architectures arm64 \
       --memory-size $lm \
-      --ephemeral-storage 4096 \
+      --ephemeral-storage=4096 \
       --timeout 240
   done
 done
