@@ -94,8 +94,12 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
     lib.export_library(f"/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar")
     print("export done :",f"{model_name}_{batchsize}.tar")
     convert_time = time.time() - convert_start_time
-   
-    s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{framework}/{model_name}_{model_size}.tar')
+    
+    if framework=="onnx":
+        s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/onnx/{model_name}_{model_size}.tar')
+    else:
+        s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{model_name}_{model_size}.tar')
+
     print("S3 upload done")
 
     return convert_time
