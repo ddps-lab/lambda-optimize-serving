@@ -5,10 +5,10 @@ import numpy as np
 import os
 import boto3
 import torch
+import json
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
-
 
 def check_results(prefix,model_size,model_name,batchsize):    
     exist=False
@@ -26,6 +26,7 @@ def check_results(prefix,model_size,model_name,batchsize):
 
 def load_model(framework,model_name,model_size):    
     import onnx
+
     if "onnx" in framework :
         framework = "onnx"
         os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
@@ -47,7 +48,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
 
     # ImageClf input 
     if wtype == "img":
-        if model_name=="inception_v3":
+        if model_name == "inception_v3":
             imgsize=299
         input_shape = (batchsize, 3, imgsize, imgsize)
         data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
@@ -80,7 +81,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
         elif wtype == "nlp":
             traced_model = torch.jit.trace(model, tokens_tensor,segments_tensors)
             input_info = [('input0', [batchsize,seq_length])]
-        mod, params = relay.frontend.from_pytorch(traced_model, input_infos=input_info ,default_dtype="float32")
+        mod, params = relay.frontend.from_pytorch(traced_model, input_infos=input_info, default_dtype="float32")
 
     if layout == "NHWC":
         desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
@@ -95,9 +96,7 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
     else:
         assert layout == "NCHW"
 
-        
-    target = tvm.target.arm_cpu()
-    # target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
+    target = "llvm -mcpu=core-avx2"
     
     convert_start_time = time.time()
     with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
@@ -107,28 +106,27 @@ def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=
 
 
     if framework=="onnx":
-        prefix = f'models/tvm/arm/onnx/'
+        prefix = f'models/tvm/intel/onnx/'
         exist = check_results(prefix,model_size,model_name,batchsize)
-        if exist == False:
-            os.makedirs(os.path.dirname(f'/tmp/tvm/arm/{model_name}/'), exist_ok=True)
-            lib.export_library(f"/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar")
+        if exist==False:
+            os.makedirs(os.path.dirname(f'/tmp/tvm/intel/{model_name}/'), exist_ok=True)
+            lib.export_library(f"/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar")
             print("export done :",f"{model_name}_{batchsize}.tar")
-            s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/onnx/{model_name}_{model_size}_{batchsize}.tar')
+            s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/onnx/{model_name}_{model_size}_{batchsize}.tar')
             print("S3 upload done")
 
     else:
-        prefix = f'models/tvm/arm/'
+        prefix = f'models/tvm/intel/'
         exist = check_results(prefix,model_size,model_name,batchsize)
-        if exist == False:
-            os.makedirs(os.path.dirname(f'/tmp/tvm/arm/{model_name}/'), exist_ok=True)
-            lib.export_library(f"/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar")
+        if exist==False:
+            os.makedirs(os.path.dirname(f'/tmp/tvm/intel/{model_name}/'), exist_ok=True)
+            lib.export_library(f"/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar")
             print("export done :",f"{model_name}_{batchsize}.tar")
-            s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{model_name}_{model_size}_{batchsize}.tar')
+            s3_client.upload_file(f'/tmp/tvm/intel/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/intel/{model_name}_{model_size}_{batchsize}.tar')
             print("S3 upload done")
 
     return convert_time
 
-    
 def lambda_handler(event, context):    
     workload_type = event['workload_type']
     model_name = event['model_name']
@@ -139,8 +137,8 @@ def lambda_handler(event, context):
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
     convert_time = 0
-    
-    if "tvm" in configuration["arm"] :
+
+    if "tvm" in configuration["intel"] :
         start_time = time.time()
         model = load_model(framework,model_name,model_size)
         load_time = time.time() - start_time
