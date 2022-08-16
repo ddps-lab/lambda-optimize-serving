@@ -11,15 +11,15 @@ import tvm.contrib.graph_executor as runtime
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 
-def load_model(framework, model_name, model_size):
+def load_model(framework, model_name, model_size,batchsize):
     s3_client = boto3.client('s3')
 
     os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
     if "onnx" in framework:
-        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/onnx/{model_name}_{model_size}.tar',
+        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/onnx/{model_name}_{model_size}_{batchsize}.tar',
                                 f'/tmp/tvm/{model_name}_{model_size}.tar')
     else:
-        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/{model_name}_{model_size}.tar',
+        s3_client.download_file(BUCKET_NAME, f'models/tvm/intel/{model_name}_{model_size}_{batchsize}.tar',
                                 f'/tmp/tvm/{model_name}_{model_size}.tar')
 
     model = f"/tmp/tvm/{model_name}_{model_size}.tar"
@@ -30,7 +30,7 @@ def load_model(framework, model_name, model_size):
 def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224, repeat=10):
     target = "llvm -mcpu=core-avx2"
     dev = tvm.device(target, 0)
-    model_path = load_model(framework, model_name, model_size)
+    model_path = load_model(framework, model_name, model_size,batchsize)
     loaded_lib = tvm.runtime.load_module(model_path)
     module = runtime.GraphModule(loaded_lib["default"](dev))
 
@@ -86,9 +86,13 @@ def lambda_handler(event, context):
     log_group_name = context.log_group_name
 
     if "tvm" in optimizer:
-        start_time = time.time()
-        res = tvm_serving(workload_type, framework, model_name, model_size, batchsize)
-        running_time = time.time() - start_time
+        try:
+            start_time = time.time()
+            res = tvm_serving(workload_type, framework, model_name, model_size, batchsize)
+            running_time = time.time() - start_time
+        except:
+            running_time=0
+            print(f"Error in {model_name} {model_size} {lambda_memory} {batchsize}") 
 
         return {
             'workload_type': workload_type,
