@@ -1,162 +1,92 @@
-# image-classification & nlp converter 
-
-import time
-import numpy as np
+# inference results check module
+import json
 import os
 import boto3
-import torch
+from datetime import datetime, timedelta
+import time
+import io
+import pickle
+
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
+s3 = boto3.resource('s3') 
 
 
-def check_results(prefix,model_size,model_name,batchsize):    
+def check_results(info,optimizer,hardware):    
     exist=False
 
+    model_size = info['model_size']
+    model_name = info['model_name']
+    batchsize = info['batchsize']
+    lambda_mem = info['lambda_memory']
+
+
+    prefix = f'results/{optimizer}/{hardware}/'
     obj_list = s3_client.list_objects(Bucket=BUCKET_NAME,Prefix=prefix)
 
-    check = prefix + f'{model_name}_{model_size}_{batchsize}.tar'
+    check = prefix + f'{model_name}_{model_size}_{batchsize}_{lambda_mem}.json'
     contents_list = obj_list['Contents']
     for content in contents_list:
         # print(content)
         if content['Key']== check : 
             exist=True
-            break
+            # 파일 내용을 읽어서 ses 보내기 
+            obj = s3.Object(BUCKET_NAME,f"{check}")
+            bytes_value = obj.get()['Body'].read()
+            filejson = bytes_value.decode('utf8')
+            fileobj = json.loads(filejson)
+            ses_send(info['user_email'],fileobj,optimizer,hardware)
+
     return exist 
 
-def load_model(framework,model_name,model_size):    
-    import onnx
-    if "onnx" in framework :
-        framework = "onnx"
-        os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
-        PATH = f"/tmp/{framework}/{model_name}_{model_size}/"
-        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}.onnx', f'/tmp/{framework}/{model_name}_{model_size}/model.onnx')
-        model = onnx.load(PATH+'model.onnx')
-    else:
-        framework="torch"
-        os.makedirs(os.path.dirname(f'/tmp/{framework}/{model_name}_{model_size}/'), exist_ok=True)
-        PATH = f"/tmp/{framework}/{model_name}_{model_size}/"
-        s3_client.download_file(BUCKET_NAME, f'models/{framework}/{model_name}_{model_size}/model.pt', f'/tmp/{framework}/{model_name}_{model_size}/model.pt')
-        model = torch.load(PATH+'model.pt')
-   
-    return model
+def ses_send(user_email,info , optimizer,hardware):
+    dst_format = {"ToAddresses":[f"{user_email}"],
+    "CcAddresses":[],
+    "BccAddresses":[]}
 
-def optimize_tvm(wtype,framework, model,model_name,batchsize,model_size,imgsize=224,seq_length=128, layout="NCHW"):
-    import tvm
-    from tvm import relay
+    dfile_path = "/tmp/destination.json"
 
-    # ImageClf input 
-    if wtype == "img":
-        if model_name=="inception_v3":
-            imgsize=299
-        input_shape = (batchsize, 3, imgsize, imgsize)
-        data_array = np.random.uniform(0, 255, size=input_shape).astype("float32")
-        torch_data = torch.tensor(data_array)
+    with open(dfile_path, 'w', encoding='utf-8') as file:
+        json.dump(dst_format, file)
 
-    # NLP input 
-    elif wtype == "nlp":
-        inputs = np.random.randint(0, 2000, size=(seq_length))
-        token_types = np.random.randint(0,2,size=(seq_length))
+    message_format = {
+                        "Subject": {
+                            "Data": "AYCI : AllYouCanInference results mail",
+                            "Charset": "UTF-8"
+                        },
+                        "Body": {
+                            "Text": {
+                                "Data": f"AYCI convert time results\n---------------------------------------\n{info['model_name']} convert using {info['optimizer'].upper()} on {info['hardware'].upper()} \n{info['model_name']} size : {info['model_size']} MB\nConvert {info['model_name']} latency : {round(info['convert_time'],4)} s\n\nAYCI inference time results\n---------------------------------------\n{info['model_name']} inference Done!\n{info['model_name']} size : {info['model_size']} MB\nInference batchsize : {info['batchsize']}\nInference {info['model_name']} latency on {info['hardware'].upper()}: {round(info['inference_time'],4)} s\n-----------------------------------------------\nLambda memory size : {info['lambda_memory']}\nMax Memory Used : {info['max_memory_used']}",
+                                "Charset": "UTF-8"
+                            },
+                        }
+                    }
+    mfile_path = "/tmp/message.json"
 
-        tokens_tensor = torch.tensor(np.array([inputs]))
-        segments_tensors = torch.tensor(np.array([token_types]))
+    with open(mfile_path, 'w', encoding='utf-8') as mfile:
+        json.dump(message_format, mfile)
 
-    if "onnx" in framework:   
-        framework="onnx"
-        if wtype == "img":
-            shape_dict = {"input0": data_array.shape}
-        elif wtype == "nlp":
-            shape_dict = {"input0": [batchsize,seq_length]}
-        mod, params = relay.frontend.from_onnx(model, shape=shape_dict)
-        
-    elif "torch" in framework:
-        framework="torch"
-        model.eval()
-        # torch imageclf 
-        if wtype == "img":
-            traced_model = torch.jit.trace(model, torch_data)
-            input_info = [('input0', input_shape)]
-        # torch nlp
-        elif wtype == "nlp":
-            traced_model = torch.jit.trace(model, tokens_tensor,segments_tensors)
-            input_info = [('input0', [batchsize,seq_length])]
-        mod, params = relay.frontend.from_pytorch(traced_model, input_infos=input_info ,default_dtype="float32")
-
-    if layout == "NHWC":
-        desired_layouts = {"nn.conv2d": ["NHWC", "default"]}
-        seq = tvm.transform.Sequential(
-            [
-                relay.transform.RemoveUnusedFunctions(),
-                relay.transform.ConvertLayout(desired_layouts),
-            ]
-        )
-        with tvm.transform.PassContext(opt_level=3):
-            mod = seq(mod)
-    else:
-        assert layout == "NCHW"
-
-        
-    target = tvm.target.arm_cpu()
-    # target = 'llvm -device=arm_cpu -mtriple=aarch64-linux-gnu'
-    
-    convert_start_time = time.time()
-    with tvm.transform.PassContext(opt_level=3,required_pass=["FastMath"]):
-        mod = relay.transform.InferType()(mod)
-        lib = relay.build(mod, target=target, params=params)
-    convert_time = time.time() - convert_start_time
+    os.system("aws ses send-email --from allyoucaninference@gmail.com --destination=file:///tmp/destination.json --message=file:///tmp/message.json")
 
 
-    if framework=="onnx":
-        prefix = f'models/tvm/arm/onnx/'
-        exist = check_results(prefix,model_size,model_name,batchsize)
-        if exist == False:
-            os.makedirs(os.path.dirname(f'/tmp/tvm/arm/{model_name}/'), exist_ok=True)
-            lib.export_library(f"/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar")
-            print("export done :",f"{model_name}_{batchsize}.tar")
-            s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/onnx/{model_name}_{model_size}_{batchsize}.tar')
-            print("S3 upload done")
 
-    else:
-        prefix = f'models/tvm/arm/'
-        exist = check_results(prefix,model_size,model_name,batchsize)
-        if exist == False:
-            os.makedirs(os.path.dirname(f'/tmp/tvm/arm/{model_name}/'), exist_ok=True)
-            lib.export_library(f"/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar")
-            print("export done :",f"{model_name}_{batchsize}.tar")
-            s3_client.upload_file(f'/tmp/tvm/arm/{model_name}/{model_name}_{batchsize}.tar',BUCKET_NAME,f'models/tvm/arm/{model_name}_{model_size}_{batchsize}.tar')
-            print("S3 upload done")
-
-    return convert_time
-
-    
-def lambda_handler(event, context):    
-    workload_type = event['workload_type']
-    model_name = event['model_name']
-    model_size = event['model_size']
-    framework = event['framework']
-    configuration = event['configuration']
-    batchsize = event['batchsize']
-    user_email = event ['user_email']
-    lambda_memory = event['lambda_memory']
-    convert_time = 0
-    
-    if "tvm" in configuration["arm"] :
-        start_time = time.time()
-        model = load_model(framework,model_name,model_size)
-        load_time = time.time() - start_time
-        print("Model load time : ",load_time)
-
-        print(f"Hardware optimize - {framework} model to TVM model")
-        convert_time = optimize_tvm(workload_type,framework,model,model_name,batchsize,model_size)
-
-    return {
-            'workload_type':workload_type,
-            'model_name': model_name,
-            'model_size': model_size,
-            'configuration': event['configuration'],
-            'framework': framework,
-            'lambda_memory': lambda_memory,
-            'batchsize': batchsize,
-            'user_email': user_email,
-            'convert_time': convert_time
+def lambda_handler(event, context):
+    body = json.loads(event['body'])
+    print(event)
+    print(body)
+    info = {
+            'model_name':body['model_name'],
+            'model_size':body['model_size'],
+            'hardware':body['hardware'],
+            'framework':body['framework'],
+            'optimizer':body['optimizer'],
+            'lambda_memory':body['lambda_memory'],
+            'batchsize':body['batchsize'],
+            'user_email':body['user_email']
         }
+
+    exist = check_results(info,info['optimizer'],info['hardware'])
+    
+
+    return { 'result_exist':exist}
