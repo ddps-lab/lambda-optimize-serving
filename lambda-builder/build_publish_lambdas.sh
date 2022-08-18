@@ -44,16 +44,3 @@ for serv in $intel_serving; do
 done
 
 
-for serv in $arm_serving; do
-  for lm in $lambda_memory; do
-    aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
-      --environment "Variables={BUCKET_NAME=ayci}"
-  done
-done
-
-for serv in $intel_serving; do
-  for lm in $lambda_memory; do
-    aws lambda update-function-configuration --region us-west-2 --function-name $IMAGE_NAME'_'$serv'_'$lm \
-      --environment "Variables={BUCKET_NAME=ayci}"
-  done
-done
