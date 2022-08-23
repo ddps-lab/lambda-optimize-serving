@@ -9,12 +9,10 @@ from tvm import relay
 import tvm.contrib.graph_executor as runtime
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
-
+s3_client = boto3.client('s3')
 
 def load_model(framework, model_name, model_size,batchsize):
     load_start = time.time()
-    s3_client = boto3.client('s3')
-
     os.makedirs(os.path.dirname(f'/tmp/tvm/'), exist_ok=True)
     if "onnx" in framework:
         s3_client.download_file(BUCKET_NAME, f'models/tvm/arm/onnx/{model_name}_{model_size}_{batchsize}.tar',
@@ -26,6 +24,24 @@ def load_model(framework, model_name, model_size,batchsize):
     model = f"/tmp/tvm/{model_name}_{model_size}.tar"
     print(time.time() - load_start)
     return model
+
+def update_results(framework,model_name,model_size,batchsize,lambda_memory,inference_mean, inference_median,inf_time_list,running_time):
+    info = {
+            'inference_mean' : inference_mean,
+            'inference_median' : inference_median ,
+            'inference_all' : inf_time_list,
+            'inference_handler_time' : running_time
+    }
+
+    with open(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json','w') as f:
+        json.dump(info, f, ensure_ascii=False, indent=4)  
+    
+    if "onnx" in framework :
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/arm/onnx/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
+        print("upload done : convert time results")
+    else:
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/arm/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
+        print("upload done : convert time results")      
 
 
 def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224, repeat=10):
@@ -67,8 +83,10 @@ def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224
         running_time = time.time() - start_time
         time_list.append(running_time)
 
-    res = np.median(np.array(time_list[1:]))
-    return res
+    median = np.median(np.array(time_list[1:]))
+    mean = np.mean(np.array(time_list[1:]))
+
+    return mean, median , time_list
 
 
 def lambda_handler(event, context):
@@ -81,18 +99,15 @@ def lambda_handler(event, context):
     lambda_memory = event['lambda_memory']
     batchsize = event['batchsize']
     user_email = event['user_email']
-    convert_time = event['convert_time']
     request_id = context.aws_request_id
     log_group_name = context.log_group_name
-      
+    
+
     if "tvm" in optimizer:
-        try:
-            start_time = time.time()
-            res = tvm_serving(workload_type, framework, model_name, model_size, batchsize)
-            running_time = time.time() - start_time
-        except:
-            running_time=0
-            print(f"Error in {model_name} {model_size} {lambda_memory} {batchsize}") 
+        start_time = time.time()
+        inference_mean, inference_median, inf_time_list = tvm_serving(workload_type, framework, model_name, model_size, batchsize)
+        running_time = time.time() - start_time
+        update_results(framework,model_name,model_size,batchsize,lambda_memory,inference_mean, inference_median,inf_time_list,running_time)
 
         return {
             'workload_type': workload_type,
@@ -105,11 +120,10 @@ def lambda_handler(event, context):
             'batchsize': batchsize,
             'user_email': user_email,
             'execute': True,
-            'convert_time': convert_time,
-            'inference_time': running_time,
             'request_id': request_id,
             'log_group_name': log_group_name
         }
+
     else:
         return {
             'execute': False
