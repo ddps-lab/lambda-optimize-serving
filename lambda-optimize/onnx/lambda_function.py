@@ -1,13 +1,40 @@
-# image-classification converter 
+# image-classification & nlp converter 
 
 import time
 from json import load
+import json
 import numpy as np
 import os
 import boto3
 
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 s3_client = boto3.client('s3') 
+
+
+def check_results(prefix,model_size,model_name):    
+    exist=False
+
+    obj_list = s3_client.list_objects(Bucket=BUCKET_NAME,Prefix=prefix)
+
+    check = prefix + f'{model_name}_{model_size}.onnx'
+    contents_list = obj_list['Contents']
+    for content in contents_list:
+        # print(content)
+        if content['Key']== check : 
+            exist=True
+            break
+    return exist 
+
+def update_results(model_name,model_size,batchsize,convert_time,load_time):
+    info = {'base_model_load_time':load_time,
+            'convert_time' : convert_time}    
+
+    with open(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json','w') as f:
+        json.dump(info, f, ensure_ascii=False, indent=4)  
+    
+    s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/onnx/{model_name}_{model_size}_{batchsize}_convert.json')
+    print("upload done : convert time results")
+
 
 
 def load_model(model_name,model_size):
@@ -22,14 +49,15 @@ def load_model(model_name,model_size):
     return model
 
 
-def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_length=128):
+def optimize_onnx(wtype,model_name,batchsize,model_size,imgsize=224,seq_length=128):
     import torch.onnx
     import hashlib
-    # 원본 모델 
-
-    if model_name == "inception_v3":
-        imgsize=299
+    ######0. 원본 모델 
+    start_time = time.time()
+    model = load_model(model_name,model_size)
+    load_time = time.time() - start_time
     
+    #####1. onnx optimize 후 저장될 공간 만들기 
     os.makedirs(os.path.dirname(f'/tmp/onnx/{model_name}/'), exist_ok=True)
     output_onnx = f'/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx'
     print("Exporting model to ONNX format at '{}'".format(output_onnx))
@@ -38,7 +66,9 @@ def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_le
     input_names = ["input0"]
     output_names = ["output0"]
 
-    if wtype == "img":   
+    if wtype == "img": 
+        if model_name == "inception_v3":
+            imgsize=299  
         inputs = torch.randn(batchsize, 3, imgsize, imgsize)
 
         torch.onnx.export(model, inputs, output_onnx, export_params=True, verbose=False,do_constant_folding=True,
@@ -65,7 +95,7 @@ def optimize_onnx(wtype,model,model_name,batchsize,model_size,imgsize=224,seq_le
     s3_client.upload_file(f'/tmp/onnx/{model_name}/{model_name}_{batchsize}.onnx',BUCKET_NAME,f'models/onnx/{model_name}_{model_size}.onnx')
     print("S3 upload done")
 
-    return convert_time
+    return load_time,convert_time
 
 
 def lambda_handler(event, context):    
@@ -77,16 +107,15 @@ def lambda_handler(event, context):
     batchsize = event['batchsize']
     user_email = event ['user_email']
     lambda_memory = event['lambda_memory']
-    convert_time = 0
 
-    if "onnx" in configuration["intel"] or "onnx" in configuration["arm"]:
-        start_time = time.time()
-        model = load_model(model_name,model_size)
-        load_time = time.time() - start_time
-        print("Model load time : ",load_time)
+    # convert한 모델이 있는지 확인 
+    prefix = 'models/onnx/'
+    exist = check_results(prefix,model_size,model_name)
 
-        print("Model optimize - Torch model to ONNX model")
-        convert_time = optimize_onnx(workload_type,model,model_name,batchsize,model_size)
+    if exist==False:
+        if "onnx" in configuration["intel"] or "onnx" in configuration["arm"]:
+            load_time, convert_time = optimize_onnx(workload_type,model_name,batchsize,model_size)
+            update_results(model_name,model_size,batchsize,convert_time,load_time)
 
     return {
             'workload_type':workload_type,
@@ -97,5 +126,4 @@ def lambda_handler(event, context):
             'lambda_memory': lambda_memory,
             'batchsize': batchsize,
             'user_email': user_email,
-            'convert_time': convert_time
         }
