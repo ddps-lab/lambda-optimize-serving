@@ -12,8 +12,7 @@ for m in $model; do
     for lm in $lambda_memory;do
         url_parmas='{"workload_type":"img","model_name":'$m',"framework":"torch","configuration":{"intel":["onnx","tvm","base"],"arm":["onnx","tvm","base"]},"lambda_memory":'$lm',"batchsize":'$batch',"user_email":"subean@kookmin.ac.kr","model_size":'${arr_model_size[$cnt]}',"workload_type":"img"}'
         export SF_URL=""
-        echo $url_parmas
-        # curl -X POST -H "Content-Type: application/json" -d ${url_parmas} $SF_URL
+        curl -X POST -H "Content-Type: application/json" -d ${url_parmas} $SF_URL
     done
     ((cnt+=1))
 done
