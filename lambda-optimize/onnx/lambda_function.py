@@ -32,7 +32,7 @@ def update_results(model_name,model_size,batchsize,convert_time,load_time):
     with open(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json','w') as f:
         json.dump(info, f, ensure_ascii=False, indent=4)  
     
-    s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/onnx/{model_name}_{model_size}_{batchsize}_convert.json')
+    s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/onnx/{model_name}_{model_size}_convert.json')
     print("upload done : convert time results")
 
 
