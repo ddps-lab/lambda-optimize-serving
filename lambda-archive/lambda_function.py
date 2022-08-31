@@ -60,9 +60,10 @@ def upload_data(info,max_memory_used):
     try:
         if info['optimizer'] == "onnx":
             convert_prefix = f'results/{info["optimizer"]}/'
+            convert_check = convert_prefix + f'{info["model_name"]}_{info["model_size"]}_convert.json'
         else:
             convert_prefix = f'results/{info["optimizer"]}/{info["hardware"]}/'
-        convert_check = convert_prefix + f'{info["model_name"]}_{info["model_size"]}_{info["batchsize"]}_convert.json'
+            convert_check = convert_prefix + f'{info["model_name"]}_{info["model_size"]}_{info["batchsize"]}_convert.json'
         convert_time = getLatency(convert_prefix, convert_check, "convert_time")
     except:
         # base 인 경우 convert time 0 
