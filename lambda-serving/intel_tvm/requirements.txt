@@ -12,3 +12,4 @@ cloudpickle
 
 Pillow
 awscli
+pytorch_transformers
