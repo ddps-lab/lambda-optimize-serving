@@ -4,3 +4,4 @@ pytest
 python-dotenv
 Pillow
 awscli
+pytorch_transformers
