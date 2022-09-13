@@ -12,3 +12,4 @@ psutil
 cloudpickle
 
 Pillow
+pytorch_transformers

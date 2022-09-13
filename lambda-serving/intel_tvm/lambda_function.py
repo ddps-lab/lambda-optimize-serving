@@ -37,16 +37,17 @@ def update_results(framework,model_name,model_size,batchsize,lambda_memory,infer
         json.dump(info, f, ensure_ascii=False, indent=4)  
     
     if "onnx" in framework :
-        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/intel/onnx/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/intel/onnx/inference/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
         print("upload done : convert time results")
     else:
-        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/intel/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json',BUCKET_NAME,f'results/tvm/intel/inference/{model_name}_{model_size}_{batchsize}_{lambda_memory}_inference.json')
         print("upload done : convert time results")      
 
 
-def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224, repeat=10):
+def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224,seq_length = 128, repeat=10):
     target = "llvm -mcpu=core-avx2"
     dev = tvm.device(target, 0)
+   
     model_path = load_model(framework, model_name, model_size,batchsize)
     loaded_lib = tvm.runtime.load_module(model_path)
     module = runtime.GraphModule(loaded_lib["default"](dev))
@@ -65,22 +66,20 @@ def tvm_serving(wtype, framework, model_name, model_size, batchsize, imgsize=224
         module.set_input(input_name, data)
 
     elif wtype == 'nlp':
-        dtype = "float32"
-        seq_length = 128
-        inputs = np.random.randint(0, 2000, size=(batchsize, seq_length)).astype(dtype)
-        token_types = np.random.uniform(size=(batchsize, seq_length)).astype(dtype)
-        dtype = 'float32'
-        valid_length = np.asarray([seq_length] * batchsize).astype(dtype)
+        
+        inputs = np.random.randint(0, 2000, size=(batchsize, seq_length)).astype('int')
+        token_types = np.random.uniform(size=(batchsize, seq_length)).astype('int')
+#         valid_length = np.asarray([seq_length] * batchsize).astype('int')
 
         data = tvm.nd.array(inputs, dev)
         token_types_nd = tvm.nd.array(token_types, dev)
-        valid_length_nd = tvm.nd.array(valid_length, dev)
-        module.set_input(data0=data, data1=token_types_nd, data2=valid_length_nd)
+#         valid_length_nd = tvm.nd.array(valid_length, dev)
+        module.set_input(data0=data, data1=token_types_nd)
 
     time_list = []
     for i in range(repeat):
         start_time = time.time()
-        module.run(data=data)
+        module.run()
         running_time = time.time() - start_time
         time_list.append(running_time)
 

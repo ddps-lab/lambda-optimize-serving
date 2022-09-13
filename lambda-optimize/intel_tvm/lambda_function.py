@@ -32,10 +32,10 @@ def update_results(framework,model_name,model_size,batchsize,convert_time,load_t
         json.dump(info, f, ensure_ascii=False, indent=4)  
     
     if "onnx" in framework : 
-        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/tvm/intel/onnx/{model_name}_{model_size}_{batchsize}_convert.json')
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/tvm/intel/onnx/convert/{model_name}_{model_size}_{batchsize}_convert.json')
         print("upload done : convert time results")
     else:
-        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/tvm/intel/{model_name}_{model_size}_{batchsize}_convert.json')
+        s3_client.upload_file(f'/tmp/{model_name}_{model_size}_{batchsize}_convert.json',BUCKET_NAME,f'results/tvm/intel/convert/{model_name}_{model_size}_{batchsize}_convert.json')
         print("upload done : convert time results")
 
 
@@ -77,11 +77,11 @@ def optimize_tvm(wtype,framework,model_name,batchsize,model_size,imgsize=224,seq
 
     # NLP input 
     elif wtype == "nlp":
-        inputs = np.random.randint(0, 2000, size=(seq_length))
-        token_types = np.random.randint(0,2,size=(seq_length))
+        inputs = np.random.randint(0, 2000, size=(batchsize,seq_length)).astype("int")
+        token_types = np.random.uniform(size=(batchsize,seq_length)).astype("int")
 
-        tokens_tensor = torch.tensor(np.array([inputs]))
-        segments_tensors = torch.tensor(np.array([token_types]))
+        tokens_tensor = torch.tensor(np.array(inputs))
+        segments_tensors = torch.tensor(np.array(token_types))
 
     ######2. make model to tvm format 
     if "onnx" in framework:   

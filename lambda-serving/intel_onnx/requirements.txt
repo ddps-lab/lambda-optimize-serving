@@ -15,3 +15,4 @@ protobuf
 onnxruntime
 
 Pillow
+pytorch_transformers
