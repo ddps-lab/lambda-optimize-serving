@@ -148,7 +148,7 @@ def lambda_handler(event, context):
             print(max_memory_used)
 
             get_info = upload_data(info,max_memory_used)
-#             ses_send(get_info)
+            ses_send(get_info)
 
         else:
             pass
